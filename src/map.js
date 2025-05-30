@@ -1,6 +1,8 @@
-const SHOW_VENTS = true; // Set to false to treat vents as walls
-const SHOW_GOAL = true;  // Set to false to treat the goal as empty space
-const SHOW_DOORS = true; // Set to false to render doors as walls
+const WS_URL = 'ws://localhost:3000';
+
+const SHOW_VENTS = false; // Set to false to treat vents as walls
+const SHOW_GOAL = false;  // Set to false to treat the goal as empty space
+const SHOW_DOORS = false; // Set to false to render doors as walls
 
 const WALL = '#';
 const EMPTY = '.';
@@ -45,4 +47,4 @@ const initialGrid = [
     [WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, GOAL, GOAL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL], // 25
 ];
 
-export { initialGrid, START, DOOR, VENT, GOAL, WALL, EMPTY, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL };
+export { initialGrid, START, DOOR, VENT, GOAL, WALL, EMPTY, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL, WS_URL };

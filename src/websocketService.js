@@ -1,4 +1,4 @@
-const WS_URL = 'ws://localhost:3000';
+import { WS_URL } from './map.js'; // Adjust the import path as necessary
 
 let socket = null;
 const subscribers = new Set();
