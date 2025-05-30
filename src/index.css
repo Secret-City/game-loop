@@ -1,0 +1,442 @@
+:root {
+    --primary-bg: #010101;
+    --container-bg: #0a192f;
+    --cyan-accent: #00FFFF;
+    --text-color: #E6F1FF;
+    --wall-color: #3D485F;
+    --player-color: #FF4136;
+    --goal-color: #FFD700;
+    /* Gold for goal area */
+    --door-color: #663399;
+    --door-highlight: #8A2BE2;
+    --font-size-base: 12px;
+    --font-size-small: 10px;
+    --font-size-header: 14px;
+    --pane-padding: 6px;
+    --cell-size: 15px;
+    /* Increased cell size for new grid */
+    --app-max-height: 700px;
+    /* Define max app height */
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    font-size: var(--font-size-base);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Center app vertically if screen is taller */
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.App {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1024px;
+    height: var(--app-max-height);
+    /* Use var directly */
+    max-height: var(--app-max-height);
+    /* Ensure max-height is also set */
+    border: 1px solid var(--cyan-accent);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.App-header {
+    padding: 6px 12px;
+    /* Reduced padding */
+    flex-shrink: 0;
+    /* Prevent header from shrinking */
+}
+
+.App-header h1 {
+    font-size: var(--font-size-header);
+    margin: 0;
+}
+
+.status-indicators span {
+    font-size: var(--font-size-small);
+    margin-left: 10px;
+}
+
+.terminal-container {
+    width: 1000px;
+    /* Changed from 100vw */
+    height: 100%;
+    /* Changed from 100vh */
+    border: 2px solid #400040;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    background-color: var(--primary-bg);
+    /* Ensure terminal bg */
+}
+
+.header-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px;
+    background-color: #1a001a;
+    border-bottom: 1px solid #400040;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    flex-shrink: 0;
+    /* Prevent shrinking */
+}
+
+.main-content {
+    display: flex;
+    flex-grow: 1;
+    padding: 8px;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    min-height: 0;
+    /* height: 350px; */
+    /* REMOVE fixed height if it was there, let flexbox manage */
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    /* Takes up 2/3 of space */
+    flex-basis: 0;
+    /* Allow shrinking/growing from this base */
+    min-width: 0;
+    gap: 8px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    /* Slightly wider for better layout */
+    flex-shrink: 0;
+    gap: 8px;
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    /* Ensure it can shrink if needed, though height 100% is primary */
+}
+
+.floor-plan-area {
+    flex-grow: 1;
+    /* Allow floor plan to take available space in left column */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #003333;
+    padding: 10px;
+    background-color: #000d0d;
+    min-height: 0;
+    /* For flex child */
+}
+
+.schematic-title {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 0.8em;
+    color: #00AAAA;
+    flex-shrink: 0;
+}
+
+.grid-container {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--cyan-accent);
+    background-color: #051020;
+    padding: 4px;
+    overflow: auto;
+    width: 100%;
+    box-sizing: border-box;
+    flex-grow: 1;
+    min-height: 0;
+    align-items: center;
+    /* Center grid if it's smaller than container */
+}
+
+.grid-row {
+    display: flex;
+    /* width: 100%; */
+    /* Let content determine width for centering */
+}
+
+.grid-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border: 1px solid #121f33;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    background-color: #081424;
+}
+
+.wall {
+    background-color: var(--wall-color);
+}
+
+.door {
+    background-color: var(--door-color);
+}
+
+.door::before {
+    content: '';
+    width: 60%;
+    height: 2px;
+    background-color: var(--door-highlight);
+    display: block;
+}
+
+.vent {
+    background-color: #336633;
+    /* Dark green for vents */
+}
+
+.vent::before {
+    content: 'V';
+    /* Simple V for vent */
+    font-size: calc(var(--cell-size) * 0.7);
+    color: #99CC99;
+    /* Lighter green for V */
+    font-weight: bold;
+}
+
+.goal-cell {
+    background-color: var(--goal-color);
+    /* Add a visual cue for goal */
+}
+
+.goal-cell::before {
+    content: '🎯';
+    /* Target emoji or other symbol */
+    font-size: calc(var(--cell-size) * 0.7);
+    color: #000;
+}
+
+.player {
+    background-color: var(--player-color);
+    border-radius: 2px;
+    z-index: 10;
+    position: relative;
+}
+
+.control-pad-container {
+    padding: 4px;
+    background-color: var(--container-bg);
+    border: 1px solid var(--cyan-accent);
+    flex-shrink: 0;
+    margin-top: 8px;
+    /* Added margin to separate from grid */
+}
+
+.control-pad {
+    display: grid;
+    grid-template-areas:
+        ". up ."
+        "left . right"
+        ". down .";
+    gap: 3px;
+    /* Slightly increased gap */
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    /* Add some margin */
+}
+
+.control-button {
+    padding: 8px;
+    /* Slightly larger buttons */
+    font-size: 1.2em;
+    background-color: var(--container-bg);
+    border: 1px solid var(--cyan-accent);
+    color: var(--cyan-accent);
+    cursor: pointer;
+}
+
+.control-button.up {
+    grid-area: up;
+}
+
+.control-button.left {
+    grid-area: left;
+}
+
+.control-button.right {
+    grid-area: right;
+}
+
+.control-button.down {
+    grid-area: down;
+}
+
+.control-button:disabled {
+    background-color: #333;
+    color: #777;
+    cursor: not-allowed;
+}
+
+.aesthetic-info-area {
+    display: flex;
+    flex-direction: column;
+    /* Stack vent pressure and the group */
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.horizontal-panes-group {
+    display: flex;
+    flex-direction: row;
+    /* Panes side-by-side */
+    gap: 8px;
+    /* Space between Facility Power and Coolant Levels */
+}
+
+.horizontal-panes-group>.info-pane {
+    flex: 1;
+    /* Distribute space equally between the two panes */
+    min-width: 0;
+    /* Allow panes to shrink if needed */
+}
+
+.info-pane {
+    background-color: #001a1a;
+    /* Dark teal background */
+    border: 1px solid #004d4d;
+    /* Teal border */
+    padding: var(--pane-padding);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /* min-height: 80px; */
+    /* Removed fixed min-height to allow flexibility */
+}
+
+.facility-power .power-bar-container {
+    width: 100%;
+    /* Ensure it takes full width of its parent */
+    height: 15px;
+    background-color: #222;
+    border: 1px solid #444;
+    margin-top: 5px;
+}
+
+.facility-power .power-bar {
+    height: 100%;
+    background-color: #ffcc00;
+    /* Yellow for power */
+    transition: width 0.5s ease-in-out;
+}
+
+.coolant-level .bar-graph-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: flex-end;
+    /* Bar grows from bottom */
+    background-color: #1a1a2e;
+    /* Dark blue-purple for coolant bg */
+    padding: 2px;
+    border: 1px solid #33335a;
+    min-height: 50px;
+    /* Ensure some height for the bar graph area */
+}
+
+.coolant-level .coolant-bar {
+    background-color: #3399ff;
+    /* Blue for coolant */
+    transition: height 0.5s ease-in-out;
+    width: 100%;
+    /* Bar takes full width of its container */
+}
+
+/* Ensure titles and displays within panes are styled consistently */
+.info-pane .pane-title {
+    font-size: var(--font-size-small);
+    color: var(--cyan-accent);
+    margin-bottom: 5px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.info-pane .power-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.info-pane .power-percentage {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #ffcc00;
+}
+
+/* Adjustments for single bar graphs like vent pressure and coolant */
+.info-pane .bar-graph-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: flex-end;
+    /* Bar grows from bottom */
+    background-color: #1a2e2e;
+    /* Dark cyan for vent bg */
+    padding: 2px;
+    border: 1px solid #335a5a;
+    min-height: 50px;
+    /* Ensure some height for the bar graph area */
+}
+
+.info-pane .bar.single-bar {
+    width: 100%;
+    /* Bar takes full width of its container */
+    background-color: var(--cyan-accent);
+    /* Default bar color */
+    transition: height 0.5s ease-in-out;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    /* Dark overlay */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--container-bg);
+    border: 2px solid var(--cyan-accent);
+    padding: 20px;
+    color: var(--text-color);
+    font-family: 'Courier New', Courier, monospace;
+    box-shadow: 0 0 15px var(--cyan-accent);
+}
+
+.modal-ascii-border {
+    color: var(--cyan-accent);
+    font-size: 14px;
+    white-space: pre;
+    text-align: center;
+}
+
+/* ... rest of CSS ... */

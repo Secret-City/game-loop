@@ -1,0 +1,29 @@
+{
+  "name": "game-loop",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:client": "vite",
+    "dev:server": "node index.js",
+    "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.0",
+    "concurrently": "^9.1.2",
+    "vite": "^6.3.5"
+  }
+}
