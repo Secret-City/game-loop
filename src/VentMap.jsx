@@ -16,8 +16,9 @@ const VentMap = () => {
                 // Optionally handle WebSocket status changes in VentMap
                 console.log('VentMap WebSocket Status:', message.payload);
             }
-            // Example: Listen for drone position updates if your WebSocket server sends them
-            if (message.type === 'drone_position' || message.type === 'move') {
+            // Only update dronePosition if it actually changed
+            if ((message.type === 'drone_position' || message.type === 'move') &&
+                (message.payload.x !== dronePosition.x || message.payload.y !== dronePosition.y)) {
                 setDronePosition(message.payload);
             }
             // You might want to update ventPressure, facilityPower, coolantLevel based on messages too
@@ -31,7 +32,7 @@ const VentMap = () => {
         websocketService.connect(); // Ensure connection is attempted
 
         return unsubscribe; // Clean up subscription on unmount
-    }, []);
+    }, [dronePosition.x, dronePosition.y]);
 
     return (
         <div className="terminal-container">
@@ -42,7 +43,7 @@ const VentMap = () => {
             <div className="main-content">
                 <div className="floor-plan-area" style={{ width: '100%' }}> {/* Vent map takes full width */}
                     <div className="schematic-title">FACILITY VENTILATION - SECTOR GAMMA</div>
-                    <div className="grid-container">
+                    <div className="grid-container" style={{ position: 'relative' }}>
                         {initialGrid.map((row, y) => (
                             <div key={y} className="grid-row">
                                 {row.map((cell, x) => {
@@ -60,7 +61,9 @@ const VentMap = () => {
                                                             ''
                                                 } ${dronePosition.x === x && dronePosition.y === y ? 'player-on-vent-map' : ''} `}
                                         >
-                                            {dronePosition.x === x && dronePosition.y === y ? 'P' : ''}
+                                            {dronePosition.x === x && dronePosition.y === y && (
+                                                <div style={{ backgroundColor: 'red', color: "red", width: "100%" }}> P </div>
+                                            )}
                                             {/* Optional: Display cell type characters if needed for VentMap */}
                                             {/* {cell === GOAL ? 'G' : cell === DOOR ? 'D' : cell === VENT ? 'V' : ''} */}
                                         </div>

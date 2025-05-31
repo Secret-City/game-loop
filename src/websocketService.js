@@ -40,8 +40,7 @@ const connect = () => {
         connectionStatus = 'DISCONNECTED';
         console.log('WebSocket connection closed');
         notifySubscribers({ type: 'status', payload: connectionStatus });
-        // Optional: implement reconnection logic here
-        // setTimeout(connect, 5000); // Attempt to reconnect after 5 seconds
+        setTimeout(connect, 5000); // Attempt to reconnect after 5 seconds
     };
 };
 
@@ -75,6 +74,13 @@ const notifySubscribers = (message) => {
 
 // Initialize connection when the service is loaded
 connect();
+
+// Heartbeat: Send ping every 30 seconds to keep the connection alive
+setInterval(() => {
+    if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'ping' }));
+    }
+}, 30000);
 
 export const websocketService = {
     connect,

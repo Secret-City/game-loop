@@ -56,20 +56,15 @@ const DroneMap = () => {
     const MAX_LOG_ENTRIES = 50;
 
     useEffect(() => {
+        // only rerender necessary cell updates using playerPosition
         setGrid(prevGrid => {
-            const newGrid = prevGrid.map(row => [...row]);
-            for (let r = 0; r < newGrid.length; r++) {
-                for (let c = 0; c < newGrid[r].length; c++) {
-                    if (newGrid[r][c] === 'P') {
-                        newGrid[r][c] = 0;
-                    }
-                }
-            }
-            if (newGrid[playerPosition.y] && newGrid[playerPosition.y][playerPosition.x] !== undefined) {
-                if (newGrid[playerPosition.y][playerPosition.x] === EMPTY || newGrid[playerPosition.y][playerPosition.x] === START) {
-                    newGrid[playerPosition.y][playerPosition.x] = 'P';
-                }
-            }
+            const newGrid = prevGrid.map((row, y) =>
+                row.map((cell, x) => {
+                    if (cell === 'P') return EMPTY;
+                    if (x === playerPosition.x && y === playerPosition.y && (cell === EMPTY || cell === START)) return 'P';
+                    return cell;
+                })
+            );
             return newGrid;
         });
     }, [playerPosition]);
@@ -90,7 +85,9 @@ const DroneMap = () => {
                 setServerStatus(message.payload);
             } else {
                 // Handle other message types if needed, or just log them
-                setLastMessage(JSON.stringify(message)); // Assuming message is an object
+                requestAnimationFrame(() => {
+                    setLastMessage(JSON.stringify(message));
+                });
                 console.log('Message from server (DroneMap):', message);
             }
         });
@@ -401,7 +398,7 @@ const DroneMap = () => {
                         <div className="console-log-area">
                             <h3>SYSTEM LOG</h3>
                             <div className="log-entries">
-                                {consoleLog.map((entry, index) => (
+                                {consoleLog.slice(0, 10).map((entry, index) => (
                                     <div key={index} className="log-entry">
                                         {entry}
                                     </div>
