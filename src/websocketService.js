@@ -20,6 +20,7 @@ const connect = () => {
     };
 
     socket.onmessage = (event) => {
+        console.log('WebSocket message received:', event.data);
         try {
             const message = JSON.parse(event.data.toString());
             notifySubscribers(message); // Notify all subscribers with the parsed message

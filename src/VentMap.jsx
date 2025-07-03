@@ -1,13 +1,28 @@
 import React, { useState, useEffect } from 'react'; // Added useState and useEffect
 import './index.css';
-import { initialGrid, WALL, DOOR, VENT, GOAL, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
+import { WALL, DOOR, VENT, GOAL, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
 import { websocketService } from './websocketService'; // Import the service
 
 const VentMap = () => {
+    const [grid, setGrid] = useState([]);
     const [ventPressure, setVentPressure] = useState(50); // Example state, adjust as needed
     const [facilityPower, setFacilityPower] = useState(75);
     const [coolantLevel, setCoolantLevel] = useState(60);
     const [dronePosition, setDronePosition] = useState({ x: -1, y: -1 }); // To show drone on vent map
+
+    useEffect(() => {
+        const fetchMap = async () => {
+            try {
+                const response = await fetch('/get-drone-map');
+                const data = await response.json();
+                setGrid(data.initialGrid);
+            } catch (error) {
+                console.error("Failed to fetch vent map:", error);
+            }
+        };
+
+        fetchMap();
+    }, []);
 
     useEffect(() => {
         const unsubscribe = websocketService.subscribe(message => {
@@ -44,8 +59,17 @@ const VentMap = () => {
                 <div className="floor-plan-area" style={{ width: '100%' }}> {/* Vent map takes full width */}
                     <div className="schematic-title">FACILITY VENTILATION - SECTOR GAMMA</div>
                     <div className="grid-container" style={{ position: 'relative' }}>
-                        {initialGrid.map((row, y) => (
+                        {grid.length > 0 && <div className="grid-row">
+                            <div className="grid-label-row" />
+                            {grid[0].map((_, x) => (
+                                <div key={x} className="grid-label-col">
+                                    {String.fromCharCode(65 + x)}
+                                </div>
+                            ))}
+                        </div>}
+                        {grid.map((row, y) => (
                             <div key={y} className="grid-row">
+                                <div className="grid-label-row">{y + 1}</div>
                                 {row.map((cell, x) => {
                                     let displayCellType = cell;
                                     if (cell === DOOR && !SHOW_DOORS) {
@@ -57,8 +81,7 @@ const VentMap = () => {
                                             className={`grid-cell ${displayCellType === WALL ? 'wall' :
                                                 displayCellType === DOOR ? 'door' : // Will only be 'door' if SHOW_DOORS is true
                                                     displayCellType === VENT ? 'vent' :
-                                                        displayCellType === GOAL ? 'goal-cell' :
-                                                            ''
+                                                        ''
                                                 } ${dronePosition.x === x && dronePosition.y === y ? 'player-on-vent-map' : ''} `}
                                         >
                                             {dronePosition.x === x && dronePosition.y === y && (

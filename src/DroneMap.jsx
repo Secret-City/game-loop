@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './index.css';
-import { initialGrid, START, DOOR, VENT, GOAL, WALL, EMPTY, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
+import { START, DOOR, VENT, GOAL, WALL, EMPTY, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
 import { websocketService } from './websocketService'; // Import the service
 
 const propellerFrames = [
@@ -36,8 +36,8 @@ const baseUpPosition = -20;
 const baseDownPosition = 20;
 
 const DroneMap = () => {
-    const [grid, setGrid] = useState(initialGrid);
-    const [playerPosition, setPlayerPosition] = useState({ x: 1, y: 1 });
+    const [grid, setGrid] = useState([]);
+    const [playerPosition, setPlayerPosition] = useState(null);
     const [consoleLog, setConsoleLog] = useState(['SYSTEM: Welcome to Drone Control.']);
     const [highlightedKey, setHighlightedKey] = useState(null);
     const [serverStatus, setServerStatus] = useState(websocketService.getStatus()); // Get initial status
@@ -56,18 +56,32 @@ const DroneMap = () => {
     const MAX_LOG_ENTRIES = 50;
 
     useEffect(() => {
-        // only rerender necessary cell updates using playerPosition
-        setGrid(prevGrid => {
-            const newGrid = prevGrid.map((row, y) =>
-                row.map((cell, x) => {
-                    if (cell === 'P') return EMPTY;
-                    if (x === playerPosition.x && y === playerPosition.y && (cell === EMPTY || cell === START)) return 'P';
-                    return cell;
-                })
-            );
-            return newGrid;
-        });
-    }, [playerPosition]);
+        const fetchMap = async () => {
+            try {
+                const response = await fetch('/get-drone-map');
+                const data = await response.json();
+                const newGrid = data.initialGrid;
+                setGrid(newGrid);
+
+                for (let y = 0; y < newGrid.length; y++) {
+                    for (let x = 0; x < newGrid[y].length; x++) {
+                        if (newGrid[y][x] === 'S') {
+                            setPlayerPosition({ x, y });
+                            newGrid[y][x] = EMPTY;
+                            break;
+                        }
+                    }
+                    if (playerPosition) break;
+                }
+            } catch (error) {
+                console.error("Failed to fetch drone map:", error);
+                setConsoleLog(prevLog => [`SYSTEM: Error fetching map. ${error.message}`, ...prevLog]);
+            }
+        };
+
+        fetchMap();
+    }, []);
+
 
     // useEffect(() => { // Replace with websocketService
     //     ws.current = new WebSocket('ws://localhost:3000');
@@ -157,7 +171,7 @@ const DroneMap = () => {
     }, [grid, gameWon, MAX_LOG_ENTRIES]);
 
     const handleKeyDown = useCallback((event) => {
-        if (event.repeat || gameWon) {
+        if (event.repeat || gameWon || !playerPosition) {
             return;
         }
 
@@ -173,7 +187,7 @@ const DroneMap = () => {
                 direction = 'NORTH';
                 break;
             case 'arrowdown':
-                newPlayerPosition.y = Math.min(initialGrid.length - 1, playerPosition.y + 1);
+                newPlayerPosition.y = Math.min(grid.length - 1, playerPosition.y + 1);
                 setHighlightedKey('ArrowDown');
                 moved = true;
                 direction = 'SOUTH';
@@ -185,7 +199,7 @@ const DroneMap = () => {
                 direction = 'WEST';
                 break;
             case 'arrowright':
-                newPlayerPosition.x = Math.min(initialGrid[0].length - 1, playerPosition.x + 1);
+                newPlayerPosition.x = Math.min(grid[0].length - 1, playerPosition.x + 1);
                 setHighlightedKey('ArrowRight');
                 moved = true;
                 direction = 'EAST';
@@ -205,18 +219,11 @@ const DroneMap = () => {
 
         if (moved) {
             if (
-                newPlayerPosition.y >= 0 && newPlayerPosition.y < initialGrid.length &&
-                newPlayerPosition.x >= 0 && newPlayerPosition.x < initialGrid[0].length
+                newPlayerPosition.y >= 0 && newPlayerPosition.y < grid.length &&
+                newPlayerPosition.x >= 0 && newPlayerPosition.x < grid[0].length
             ) {
-                let actualTargetCellType = initialGrid[newPlayerPosition.y][newPlayerPosition.x];
+                let actualTargetCellType = grid[newPlayerPosition.y][newPlayerPosition.x];
                 let effectiveTargetCellType = actualTargetCellType;
-
-                if (actualTargetCellType === VENT && !SHOW_VENTS) {
-                    effectiveTargetCellType = WALL;
-                }
-                if (actualTargetCellType === GOAL && !SHOW_GOAL) {
-                    effectiveTargetCellType = EMPTY;
-                }
 
                 let canMove = false;
                 let moveMessage = `DRONE: Moved ${direction} to [${newPlayerPosition.x}, ${newPlayerPosition.y}].`;
@@ -232,7 +239,7 @@ const DroneMap = () => {
                         canMove = false;
                         moveMessage = `DRONE: Cannot pass DOOR at [${newPlayerPosition.x}, ${newPlayerPosition.y}]. Mode: ${verticalMode.toUpperCase()}. Requires DOWN.`;
                     }
-                } else if (effectiveTargetCellType === VENT) { // This will only be true if SHOW_VENTS is true
+                } else if (effectiveTargetCellType === VENT) {
                     if (verticalMode === 'up') {
                         canMove = true;
                         moveMessage = `DRONE: Passed through VENT at [${newPlayerPosition.x}, ${newPlayerPosition.y}] (Mode: UP).`;
@@ -268,7 +275,7 @@ const DroneMap = () => {
                 setConsoleLog(prevLog => [`DRONE: Movement to [${newPlayerPosition.x}, ${newPlayerPosition.y}] blocked by boundary.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
             }
         }
-    }, [playerPosition, verticalMode, /*ws,*/ MAX_LOG_ENTRIES, initialGrid, gameWon]);
+    }, [playerPosition, verticalMode, MAX_LOG_ENTRIES, grid, gameWon]);
 
     const handleKeyUp = useCallback((event) => {
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab', 'M'].includes(event.key) ||
@@ -316,35 +323,40 @@ const DroneMap = () => {
                         <div className="floor-plan-area">
                             <div className="schematic-title">FACILITY SCHEMATIC - SECTOR GAMMA</div>
                             <div className="grid-container">
-                                {initialGrid.map((row, y) => (
-                                    <div key={y} className="grid-row">
-                                        {row.map((cell, x) => {
-                                            let displayCellType = cell;
-                                            if (cell === VENT && !SHOW_VENTS) {
-                                                displayCellType = WALL;
-                                            }
-                                            if (cell === GOAL && !SHOW_GOAL) {
-                                                displayCellType = EMPTY;
-                                            }
-                                            return (
-                                                <div
-                                                    key={x}
-                                                    className={`grid-cell ${displayCellType === WALL ? 'wall' :
-                                                        displayCellType === DOOR ? 'door' :
-                                                            displayCellType === VENT ? 'vent' : // Only if SHOW_VENTS is true
-                                                                displayCellType === GOAL ? 'goal-cell' : // Only if SHOW_GOAL is true
-                                                                    ''
-                                                        } ${playerPosition.x === x && playerPosition.y === y ? 'player' : ''
-                                                        }`}
-                                                >
-                                                </div>
-                                            );
-                                        })}
+                                {grid.length > 0 ? (<>
+                                    <div className="grid-row">
+                                        <div className="grid-label-row" />
+                                        {grid[0].map((_, x) => (
+                                            <div key={x} className="grid-label-col">
+                                                {String.fromCharCode(65 + x)}
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                    {grid.map((row, y) => (
+                                        <div key={y} className="grid-row">
+                                            <div className="grid-label-row">{y + 1}</div>
+                                            {row.map((cell, x) => {
+                                                let displayCellType = cell;
+                                                return (
+                                                    <div
+                                                        key={x}
+                                                        className={`grid-cell ${displayCellType === WALL ? 'wall' :
+                                                            displayCellType === DOOR ? 'door' :
+                                                                displayCellType === VENT ? 'wall' : // Only if SHOW_VENTS is true
+                                                                    displayCellType === GOAL ? 'goal-cell' : // Only if SHOW_GOAL is true
+                                                                        ''
+                                                            } ${playerPosition && playerPosition.x === x && playerPosition.y === y ? 'player' : ''
+                                                            }`}
+                                                    >
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </>) : <div>Loading map...</div>}
                             </div>
                             <div className="footer-info">
-                                <span>POS: X={playerPosition.x} Y={playerPosition.y} {gameWon ? "[TARGET LOCKED]" : ""}</span>
+                                <span>POS: X={playerPosition?.x} Y={playerPosition?.y} {gameWon ? "[TARGET LOCKED]" : ""}</span>
                                 <span>LEGEND: ▉ WALL □ PLAYER 🚪 DOOR <span className="vent-legend">V</span> VENT 🎯 GOAL</span>
                             </div>
                         </div>
