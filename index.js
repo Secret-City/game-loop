@@ -63,7 +63,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3030;
 httpServer.listen(PORT, () => {
     console.log(`🚀 HTTP and WebSocket server listening on port ${PORT}`);
 });
