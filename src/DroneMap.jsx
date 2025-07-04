@@ -105,7 +105,7 @@ const DroneMap = () => {
                 console.log('Message from server (DroneMap):', message);
             }
         });
-        websocketService.connect(); // Ensure connection is attempted
+        websocketService.connect('ws://towerloop:1880/ws/dronemaze'); // Ensure connection is attempted
         return unsubscribe; // Clean up subscription on unmount
     }, []);
 

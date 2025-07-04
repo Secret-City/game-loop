@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom'; // Import useLocation
 import DroneMap from './DroneMap';
 import VentMap from './VentMap';
+import VideoScreen from './VideoScreen'; // Import VideoScreen
 import './index.css';
 
 const App = () => {
@@ -11,6 +12,10 @@ const App = () => {
 
   if (mapType === 'vent') {
     return <VentMap />;
+  }
+
+  if (mapType === 'video') {
+    return <VideoScreen />;
   }
 
   // Default to DroneMap if no specific map type is requested or if it's 'drone'

@@ -44,7 +44,8 @@ const VentMap = () => {
             //   setCoolantLevel(message.payload.coolantLevel);
             // }
         });
-        websocketService.connect(); // Ensure connection is attempted
+
+        websocketService.connect('ws://towerloop:1880/ws/dronemaze'); // Ensure connection is attempted
 
         return unsubscribe; // Clean up subscription on unmount
     }, [dronePosition.x, dronePosition.y]);

@@ -4,12 +4,26 @@ let socket = null;
 const subscribers = new Set();
 let connectionStatus = 'DISCONNECTED'; // 'DISCONNECTED', 'CONNECTING', 'CONNECTED', 'ERROR'
 
-const connect = () => {
-    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-        return; // Already connected or connecting
+const connect = (urlOrPath) => {
+    let targetUrl;
+    if (urlOrPath.startsWith('ws://') || urlOrPath.startsWith('wss://')) {
+        targetUrl = urlOrPath;
+    } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        targetUrl = `${protocol}//${host}${urlOrPath}`;
     }
 
-    socket = new WebSocket(WS_URL);
+    console.log('Connecting to WebSocket at:', targetUrl);
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        if (socket.url === targetUrl) {
+            return; // Already connected or connecting to the same URL
+        }
+        // If connecting to a different URL, you might want to close the old one first.
+        // For simplicity here, we assume this is handled by context (e.g., page navigation).
+    }
+
+    socket = new WebSocket(targetUrl);
     connectionStatus = 'CONNECTING';
     notifySubscribers({ type: 'status', payload: connectionStatus });
 
@@ -20,9 +34,10 @@ const connect = () => {
     };
 
     socket.onmessage = (event) => {
-        console.log('WebSocket message received:', event.data);
+        // console.log('Raw WebSocket message received:', event.data); // Log raw data
         try {
             const message = JSON.parse(event.data.toString());
+            // console.log('Parsed WebSocket message:', message); // Log parsed message
             notifySubscribers(message); // Notify all subscribers with the parsed message
         } catch (error) {
             console.error('Error parsing WebSocket message:', error, event.data);
@@ -41,7 +56,7 @@ const connect = () => {
         connectionStatus = 'DISCONNECTED';
         console.log('WebSocket connection closed');
         notifySubscribers({ type: 'status', payload: connectionStatus });
-        setTimeout(connect, 5000); // Attempt to reconnect after 5 seconds
+        setTimeout(() => connect(WS_URL), 5000); // Pass WS_URL on reconnect
     };
 };
 
@@ -74,7 +89,11 @@ const notifySubscribers = (message) => {
 };
 
 // Initialize connection when the service is loaded
-connect();
+if (WS_URL) {
+    connect(WS_URL);
+} else {
+    console.error("WebSocket URL is not defined. Please configure WS_URL in map.js");
+}
 
 // Heartbeat: Send ping every 30 seconds to keep the connection alive
 setInterval(() => {
