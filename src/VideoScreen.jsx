@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { websocketService } from './websocketService';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const basePath = isProduction ? '/game-loop/dist/' : '/';
+
 // All styles are now defined within the component.
 const aspectRatio = 1.777;
 
@@ -113,7 +116,7 @@ const videoList = [
 const createInitialVideoSources = () => {
     const sources = {};
     for (let i = 1; i <= 8; i++) {
-        sources[i] = `/security/security_${i}_0.mp4`;
+        sources[i] = `${basePath}security/security_${i}_0.mp4`;
     }
     return sources;
 };
@@ -131,7 +134,7 @@ function VideoScreen() {
         const total = videoList.length;
 
         videoList.forEach(src => {
-            const fullPath = `/security/${src}`;
+            const fullPath = `${basePath}security/${src}`;
             const video = document.createElement('video');
             video.src = fullPath;
             video.preload = 'auto';
@@ -178,7 +181,7 @@ function VideoScreen() {
                 const seqNum = parseInt(sequence, 10);
 
                 if (screenNum >= 1 && screenNum <= 8 && seqNum >= -1) {
-                    const newSrc = `/security/security_${screenNum}_${seqNum}.mp4`;
+                    const newSrc = `${basePath}security/security_${screenNum}_${seqNum}.mp4`;
                     setVideoSources(prevSources => ({
                         ...prevSources,
                         [screenNum]: newSrc
