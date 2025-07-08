@@ -10,7 +10,7 @@ const aspectRatio = 1.777;
 const styles = {
     videoGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(3, 1fr)',
         gap: '2px',
         width: '100vw',
         backgroundColor: '#111',
@@ -102,22 +102,28 @@ const styles = {
 
 // List of all video files to be preloaded.
 const videoList = [
-    "security_1_0.mp4", "security_1_1.mp4", "security_1_2.mp4", "security_1_3.mp4",
-    "security_2_0.mp4", "security_2_1.mp4", "security_2_2.mp4",
-    "security_3_0.mp4", "security_3_1.mp4", "security_3_2.mp4", "security_3_3.mp4",
-    "security_4_0.mp4", "security_4_1.mp4", "security_4_2.mp4", "security_4_3.mp4",
-    "security_5_0.mp4", "security_5_1.mp4", "security_5_2.mp4", "security_5_3.mp4",
-    "security_6_0.mp4", "security_6_1.mp4", "security_6_2.mp4", "security_6_3.mp4", "security_6_4.mp4",
-    "security_7_0.mp4", "security_7_1.mp4", "security_7_2.mp4",
-    "security_8_0.mp4", "security_8_1.mp4", "security_8_2.mp4", "security_8_3.mp4"
+    "1_gas_countdown.mp4", "1_gas_win.mp4", "1_gas_won_loop.mp4", "2_gas_win.mp4",
+    "3_racoon_countdown.mp4", "3_racoon_win.mp4", "4_gas_win.mp4",
+    "4_spy_win.mp4", "5_spy_countdown.mp4", "5_spy_win.mp4", "6_spy_win.mp4",
+    "6_music_countdown.mp4", "6_music_win.mp4", "7_music_win.mp4", "8_power_countdown.mp4"
 ];
 
 // Helper to create initial state for 12 screens, all showing the "no signal" video.
 const createInitialVideoSources = () => {
-    const sources = {};
-    for (let i = 1; i <= 8; i++) {
-        sources[i] = `${basePath}security/security_${i}_0.mp4`;
-    }
+    const sources = {
+        1: `${basePath}security/1_begin.png`,
+        2: `${basePath}security/2_begin.png`,
+        3: `${basePath}security/3_begin.png`,
+        4: `${basePath}security/4_begin.png`,
+        5: `${basePath}security/5_begin.png`,
+        6: `${basePath}security/6_begin.png`,
+        7: `${basePath}security/7_begin.png`,
+        8: `${basePath}security/8_begin.png`,
+        9: `${basePath}security/9_begin.png`,
+    };
+    // for (let i = 1; i <= 8; i++) {
+    //     sources[i] = `${basePath}security/${i}_begin.png`;
+    // }
     return sources;
 };
 
@@ -178,10 +184,10 @@ function VideoScreen() {
                 }
                 const { screen, sequence } = parsedMsg;
                 const screenNum = parseInt(screen, 10);
-                const seqNum = parseInt(sequence, 10);
+                const filename = sequence; // sequence is now the full filename
 
-                if (screenNum >= 1 && screenNum <= 8 && seqNum >= -1) {
-                    const newSrc = `${basePath}security/security_${screenNum}_${seqNum}.mp4`;
+                if (screenNum >= 1 && screenNum <= 9 && filename) {
+                    const newSrc = `${basePath}security/${filename}`;
                     setVideoSources(prevSources => ({
                         ...prevSources,
                         [screenNum]: newSrc
@@ -189,7 +195,7 @@ function VideoScreen() {
 
                     // The `autoPlay` prop on the <video> element will handle playing the new source.
                     // Calling load() and play() imperatively can cause race conditions.
-                    console.log(`Screen ${screenNum} updated to sequence ${seqNum}`);
+                    console.log(`Screen ${screenNum} updated to filename: ${filename}`);
                 }
                 // }
             } catch (err) {
@@ -217,17 +223,26 @@ function VideoScreen() {
 
     return (
         <div style={styles.videoGrid}>
-            {Object.keys(videoSources).map(screenNum => (
+            {[1, 2, 3, 4, 9, 5, 6, 7, 8].map(screenNum => (
                 <div key={screenNum} style={styles.videoContainer}>
-                    <video
-                        ref={el => videoRefs.current[screenNum] = el}
-                        style={styles.video}
-                        src={videoSources[screenNum]}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                    />
+                    {videoSources[screenNum].toLowerCase().includes('.png') ? (
+                        <img
+                            ref={el => videoRefs.current[screenNum] = el}
+                            style={styles.video}
+                            src={videoSources[screenNum]}
+                            alt={`Screen ${screenNum}`}
+                        />
+                    ) : (
+                        <video
+                            ref={el => videoRefs.current[screenNum] = el}
+                            style={styles.video}
+                            src={videoSources[screenNum]}
+                            autoPlay
+                            loop={videoSources[screenNum].toLowerCase().includes('loop')}
+                            muted
+                            playsInline
+                        />
+                    )}
                     <div style={styles.videoOverlay}>
                         {/* <div style={{ ...styles.overlayCorner, ...styles.topLeft }}></div>
                         <div style={{ ...styles.overlayCorner, ...styles.topRight }}>CAM 0{screenNum}</div>

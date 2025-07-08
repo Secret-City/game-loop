@@ -56,7 +56,7 @@ const connect = (urlOrPath) => {
         connectionStatus = 'DISCONNECTED';
         console.log('WebSocket connection closed');
         notifySubscribers({ type: 'status', payload: connectionStatus });
-        setTimeout(() => connect(WS_URL), 5000); // Pass WS_URL on reconnect
+        setTimeout(() => connect(targetUrl), 5000); // Pass targetUrl on reconnect
     };
 };
 
@@ -89,11 +89,11 @@ const notifySubscribers = (message) => {
 };
 
 // Initialize connection when the service is loaded
-if (WS_URL) {
-    connect(WS_URL);
-} else {
-    console.error("WebSocket URL is not defined. Please configure WS_URL in map.js");
-}
+// if (targetUrl) {
+//     connect(targetUrl);
+// } else {
+//     console.error("WebSocket URL is not defined. Please configure WS_URL in map.js");
+// }
 
 // Heartbeat: Send ping every 30 seconds to keep the connection alive
 setInterval(() => {
