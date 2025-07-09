@@ -42,7 +42,7 @@ const DroneMap = () => {
     const [highlightedKey, setHighlightedKey] = useState(null);
     const [serverStatus, setServerStatus] = useState(websocketService.getStatus()); // Get initial status
     const [lastMessage, setLastMessage] = useState('');
-    const [verticalMode, setVerticalMode] = useState('down');
+    const [verticalMode, setVerticalMode] = useState('down'); // Now read-only, controlled by VentMap
     const [droneFrame, setDroneFrame] = useState(0);
     const [hoverFrame, setHoverFrame] = useState(0);
 
@@ -58,7 +58,7 @@ const DroneMap = () => {
     useEffect(() => {
         const fetchMap = async () => {
             try {
-                const response = await fetch('/get-drone-map');
+                const response = await fetch(__MAP_URL__);
                 const data = await response.json();
                 const newGrid = data.initialGrid;
                 setGrid(newGrid);
@@ -97,6 +97,9 @@ const DroneMap = () => {
         const unsubscribe = websocketService.subscribe(message => {
             if (message.type === 'status') {
                 setServerStatus(message.payload);
+            } else if (message.type === 'vertical_mode_change') {
+                // Listen for vertical mode changes from VentMap
+                setVerticalMode(message.payload.verticalMode);
             } else {
                 // Handle other message types if needed, or just log them
                 requestAnimationFrame(() => {
@@ -206,12 +209,7 @@ const DroneMap = () => {
                 break;
             case ' ':
                 event.preventDefault();
-                setVerticalMode(prevMode => {
-                    const newMode = prevMode === 'up' ? 'down' : 'up';
-                    setConsoleLog(prevLog => [`DRONE: Mode set to ${newMode.toUpperCase()}`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
-                    return newMode;
-                });
-                setHighlightedKey('Space');
+                // Space bar functionality moved to VentMap - no longer handled here
                 break;
             default:
                 break;
@@ -278,8 +276,7 @@ const DroneMap = () => {
     }, [playerPosition, verticalMode, MAX_LOG_ENTRIES, grid, gameWon]);
 
     const handleKeyUp = useCallback((event) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab', 'M'].includes(event.key) ||
-            ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'm'].includes(event.key.toLowerCase())) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
             setHighlightedKey(null);
         }
     }, []);
@@ -292,6 +289,11 @@ const DroneMap = () => {
             window.removeEventListener('keyup', handleKeyUp);
         };
     }, [handleKeyDown, handleKeyUp]);
+
+    // Get drone indicator color based on vertical mode
+    const getDroneColor = () => {
+        return verticalMode === 'up' ? '#4CAF50' : '#f44336'; // Green for up, red for down
+    };
 
     const currentDroneAscii = propellerFrames[droneFrame % propellerFrames.length];
     const currentHoverOffset = hoverOffsets[hoverFrame % hoverOffsets.length];
@@ -337,6 +339,7 @@ const DroneMap = () => {
                                             <div className="grid-label-row">{y + 1}</div>
                                             {row.map((cell, x) => {
                                                 let displayCellType = cell;
+                                                const isPlayerHere = playerPosition && playerPosition.x === x && playerPosition.y === y;
                                                 return (
                                                     <div
                                                         key={x}
@@ -345,9 +348,23 @@ const DroneMap = () => {
                                                                 displayCellType === VENT ? 'wall' : // Only if SHOW_VENTS is true
                                                                     displayCellType === GOAL ? 'goal-cell' : // Only if SHOW_GOAL is true
                                                                         ''
-                                                            } ${playerPosition && playerPosition.x === x && playerPosition.y === y ? 'player' : ''
                                                             }`}
+                                                        style={isPlayerHere ? { backgroundColor: getDroneColor() } : {}}
                                                     >
+                                                        {isPlayerHere && (
+                                                            <div style={{
+                                                                color: 'white',
+                                                                fontWeight: 'bold',
+                                                                fontSize: '12px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '100%',
+                                                                height: '100%'
+                                                            }}>
+                                                                X
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -398,14 +415,15 @@ const DroneMap = () => {
 
                     <div className="right-column">
                         <div className="info-pane drone-pane">
-                            <h3>DRONE VERTICAL CONTROL</h3>
+                            <h3>DRONE VERTICAL STATUS</h3>
                             <pre
                                 className="drone-ascii"
                                 style={{ position: 'relative', transform: `translateY(${droneYPosition}px)` }}
                             >
                                 {currentDroneAscii}
                             </pre>
-                            <p>MODE: {verticalMode.toUpperCase()}</p>
+                            <p>MODE: <span className={`mode-indicator ${verticalMode}`}>{verticalMode.toUpperCase()}</span></p>
+                            <p className="control-note">Control via Ventilation Monitor</p>
                         </div>
                         <div className="console-log-area">
                             <h3>SYSTEM LOG</h3>

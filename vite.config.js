@@ -5,6 +5,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => ({
     plugins: [react()],
     base: mode === 'production' ? '/game-loop/dist/' : '/', // '/' for dev, '/game-loop/dist/' for prod
+    define: {
+        __MAP_URL__: JSON.stringify(
+            mode === 'production' ? '/get-drone-map' : 'http://towerloop:1880/get-drone-map'
+        ),
+    },
     server: {
         port: 5173, // Default Vite port
         open: true, // Auto-open browser

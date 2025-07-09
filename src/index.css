@@ -459,4 +459,93 @@ body {
     text-align: center;
 }
 
+/* VentMap Drone Control Styles */
+.drone-vertical-control {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vertical-mode-display {
+    text-align: center;
+    margin: 10px 0;
+}
+
+.mode-indicator {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.mode-indicator.up {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.mode-indicator.down {
+    background-color: #f44336;
+    color: white;
+}
+
+.mode-visualization {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.altitude-indicator {
+    padding: 5px 10px;
+    margin: 2px 0;
+    border: 1px solid #555;
+    background-color: #222;
+    color: #888;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.altitude-indicator.active {
+    background-color: var(--cyan-accent);
+    color: var(--primary-bg);
+    border-color: var(--cyan-accent);
+    box-shadow: 0 0 10px var(--cyan-accent);
+}
+
+.vertical-toggle-button {
+    background-color: #333;
+    color: var(--text-color);
+    border: 2px solid var(--cyan-accent);
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    border-radius: 3px;
+}
+
+.vertical-toggle-button:hover {
+    background-color: var(--cyan-accent);
+    color: var(--primary-bg);
+}
+
+.vertical-toggle-button.active {
+    background-color: var(--cyan-accent);
+    color: var(--primary-bg);
+    box-shadow: 0 0 15px var(--cyan-accent);
+}
+
+.control-instructions {
+    font-size: 0.8em;
+    color: #888;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.control-note {
+    font-size: 0.8em;
+    color: #888;
+    font-style: italic;
+}
+
 /* ... rest of CSS ... */
