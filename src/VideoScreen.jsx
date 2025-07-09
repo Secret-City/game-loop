@@ -127,6 +127,7 @@ const createInitialVideoSources = () => {
     return sources;
 };
 
+
 function VideoScreen() {
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingFile, setLoadingFile] = useState('');
@@ -390,7 +391,7 @@ function VideoScreen() {
                             style={styles.video}
                             src={videoSources[screenNum]}
                             autoPlay
-                            loop={videoSources[screenNum].toLowerCase().includes('loop')}
+                            {...(videoSources[screenNum].split('/').pop().toLowerCase().includes('loop') ? { loop: true } : {})}
                             muted
                             playsInline
                         />
