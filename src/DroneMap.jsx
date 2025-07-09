@@ -100,6 +100,9 @@ const DroneMap = () => {
             } else if (message.type === 'vertical_mode_change') {
                 // Listen for vertical mode changes from VentMap
                 setVerticalMode(message.payload.verticalMode);
+            } else if (message.type === 'refresh_page') {
+                console.log('DroneMap: Received refresh_page event, reloading...');
+                window.location.reload();
             } else {
                 // Handle other message types if needed, or just log them
                 requestAnimationFrame(() => {
@@ -107,8 +110,7 @@ const DroneMap = () => {
                 });
                 console.log('Message from server (DroneMap):', message);
             }
-        });
-        websocketService.connect('ws://towerloop:1880/ws/dronemaze'); // Ensure connection is attempted
+        }, 'ws://towerloop:1880/ws/dronemaze');
         return unsubscribe; // Clean up subscription on unmount
     }, []);
 

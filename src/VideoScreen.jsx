@@ -103,7 +103,7 @@ const styles = {
 // List of all video files to be preloaded.
 const videoList = [
     "1_gas_countdown.mp4", "1_gas_win.mp4", "1_gas_won_loop.mp4", "2_gas_win.mp4",
-    "3_racoon_countdown.mp4", "3_racoon_win.mp4", "4_gas_win.mp4",
+    "3_raccoon_countdown.mp4", "3_raccoon_win.mp4", "4_gas_win.mp4",
     "4_spy_win.mp4", "5_spy_countdown.mp4", "5_spy_win.mp4", "6_spy_win.mp4",
     "6_music_countdown.mp4", "6_music_win.mp4", "7_music_win.mp4", "8_power_countdown.mp4"
 ];
@@ -131,11 +131,119 @@ function VideoScreen() {
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingFile, setLoadingFile] = useState('');
     const [isLoaded, setIsLoaded] = useState(false);
+    const [loadingStarted, setLoadingStarted] = useState(false);
     const [videoSources, setVideoSources] = useState(createInitialVideoSources);
+    const [audioEnabled, setAudioEnabled] = useState(false);
     const videoRefs = useRef({});
 
-    // Effect for preloading videos
+    // Audio refs for music and sound management
+    const musicRef = useRef(null);
+    const soundRef = useRef(null);
+    const audioEnabledRef = useRef(false);
+
+    // Function to enable audio context and start loading
+    const enableAudioAndStartLoading = () => {
+        console.log('Enabling audio and starting loading...');
+        setAudioEnabled(true);
+        audioEnabledRef.current = true;
+        setLoadingStarted(true);
+
+        // Play a silent audio to unlock audio context
+        const silentAudio = new Audio('data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoAAABBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuH0fDSgCwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuH0fDSgCwFS');
+        silentAudio.play().then(() => {
+            console.log('Audio context unlocked successfully');
+        }).catch((error) => {
+            console.log('Silent audio play failed (this is normal):', error);
+        });
+    };
+
+    // Function to handle music playback
+    const playMusic = (url) => {
+        // If url is "" or undefined, stop any currently playing music
+        if (!url) {
+            console.log('Stopping music playback, no URL provided');
+            if (musicRef.current) {
+                musicRef.current.pause();
+                // musicRef.current = null;
+            }
+            return;
+        }
+        console.log('playMusic called, audioEnabled:', audioEnabledRef.current);
+        if (!audioEnabledRef.current) {
+            console.log('Audio not enabled yet, skipping music playback');
+            return;
+        }
+
+        console.log('Playing music:', url);
+
+        // Stop current music if playing
+        if (musicRef.current) {
+            musicRef.current.pause();
+            musicRef.current = null;
+        }
+
+        // Create and play new music
+        const audio = new Audio(url);
+        audio.loop = true; // Music typically loops
+        audio.volume = 0.7; // Adjust volume as needed
+
+        audio.play().then(() => {
+            console.log('Music started successfully');
+            musicRef.current = audio;
+        }).catch(error => {
+            console.error('Failed to play music:', error);
+        });
+    };
+
+    // Function to handle sound effect playback
+    const playSound = (url) => {
+        // If url is "" or undefined, stop any currently playing sound
+        if (!url) {
+            console.log('Stopping sound playback, no URL provided');
+            if (soundRef.current) {
+                soundRef.current.pause();
+                soundRef.current = null;
+            }
+            return;
+        }
+
+        console.log('playSound called, audioEnabled:', audioEnabledRef.current);
+        if (!audioEnabledRef.current) {
+            console.log('Audio not enabled yet, skipping sound playback');
+            return;
+        }
+
+        console.log('Playing sound:', url);
+
+        // Stop current sound if playing
+        if (soundRef.current) {
+            soundRef.current.pause();
+            soundRef.current = null;
+        }
+
+        // Create and play new sound
+        const audio = new Audio(url);
+        audio.volume = 1.0; // Sound effects at full volume
+
+        audio.play().then(() => {
+            console.log('Sound started successfully');
+            soundRef.current = audio;
+
+            // Clean up reference when sound ends
+            audio.addEventListener('ended', () => {
+                if (soundRef.current === audio) {
+                    soundRef.current = null;
+                }
+            });
+        }).catch(error => {
+            console.error('Failed to play sound:', error);
+        });
+    };
+
+    // Effect for preloading videos - only start after user interaction
     useEffect(() => {
+        if (!loadingStarted) return;
+
         let completed = 0;
         const total = videoList.length;
 
@@ -161,7 +269,7 @@ function VideoScreen() {
                 updateProgress(); // Still count it as completed to not block loading
             });
         });
-    }, []);
+    }, [loadingStarted]);
 
     // Effect for WebSocket communication
     useEffect(() => {
@@ -176,8 +284,26 @@ function VideoScreen() {
                     return;
                 }
 
-                // if (parsedMsg.type === 'video_update') { // Assuming server wraps messages
+                // Handle sound messages
+                if (parsedMsg.sound_type) {
+                    if (parsedMsg.sound_type === 'music') {
+                        playMusic(parsedMsg.url);
+                    } else if (parsedMsg.sound_type === 'sound') {
+                        playSound(parsedMsg.url);
+                    } else {
+                        console.warn('Unknown sound_type:', parsedMsg.sound_type);
+                    }
+                    return;
+                }
 
+                // Handle refresh page events
+                if (parsedMsg.type === 'refresh_page') {
+                    console.log('VideoScreen: Received refresh_page event, reloading...');
+                    window.location.reload();
+                    return;
+                }
+
+                // Handle video update messages
                 if (parsedMsg.screen == null || parsedMsg.screen === undefined || parsedMsg.sequence == null || parsedMsg.sequence === undefined) {
                     console.warn("Invalid message format, missing screen or sequence:", parsedMsg, parsedMsg.sequence, parsedMsg.screen);
                     return;
@@ -203,23 +329,49 @@ function VideoScreen() {
             }
         };
 
-        const unsubscribe = websocketService.subscribe(handleMessage);
-        websocketService.connect('/ws/wall'); // Ensure connection
+        const unsubscribe = websocketService.subscribe(handleMessage, 'ws://towerloop:1880/ws/wall');
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            // Clean up audio when component unmounts
+            if (musicRef.current) {
+                musicRef.current.pause();
+                musicRef.current = null;
+            }
+            if (soundRef.current) {
+                soundRef.current.pause();
+                soundRef.current = null;
+            }
+        };
     }, []);
 
-    if (!isLoaded) {
+    // Show "Load Security Feeds" button before loading starts
+    if (!loadingStarted) {
         return (
-            <div style={styles.loadingOverlay}>
-                <div style={styles.loadingText}>LOADING... {loadingProgress}%</div>
-                <div style={styles.progressBarContainer}>
-                    <div style={{ ...styles.progressBar, width: `${loadingProgress}%` }}></div>
+            <div style={{
+                ...styles.loadingOverlay,
+                cursor: 'pointer'
+            }} onClick={enableAudioAndStartLoading}>
+                <div style={styles.loadingText}>LOAD SECURITY FEEDS</div>
+                <div style={{ fontSize: '0.5em', marginTop: '1em' }}>
+                    Click to initialize system and enable audio
                 </div>
-                <div style={styles.loadingFile}>{loadingFile}</div>
             </div>
         );
     }
+
+    // Show loading progress
+    // if (!isLoaded) {
+    //     return (
+    //         <div style={styles.loadingOverlay}>
+    //             <div style={styles.loadingText}>LOADING... {loadingProgress}%</div>
+    //             <div style={styles.progressBarContainer}>
+    //                 <div style={{ ...styles.progressBar, width: `${loadingProgress}%` }}></div>
+    //             </div>
+    //             <div style={styles.loadingFile}>{loadingFile}</div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div style={styles.videoGrid}>

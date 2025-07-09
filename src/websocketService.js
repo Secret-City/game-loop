@@ -34,15 +34,14 @@ const connect = (urlOrPath) => {
     };
 
     socket.onmessage = (event) => {
-        // console.log('Raw WebSocket message received:', event.data); // Log raw data
+        // console.log('WebSocket Service: Raw message received:', event.data);
         try {
-            const message = JSON.parse(event.data.toString());
-            // console.log('Parsed WebSocket message:', message); // Log parsed message
-            notifySubscribers(message); // Notify all subscribers with the parsed message
+            const message = JSON.parse(event.data);
+            // console.log('WebSocket Service: Parsed message:', message);
+            notifySubscribers(message);
         } catch (error) {
             console.error('Error parsing WebSocket message:', error, event.data);
-            // Notify with raw data if parsing fails, or a specific error message
-            notifySubscribers({ type: 'raw_message', payload: event.data.toString() });
+            notifySubscribers({ type: 'raw_message', payload: event.data });
         }
     };
 
@@ -61,26 +60,42 @@ const connect = (urlOrPath) => {
 };
 
 const sendMessage = (message) => {
+    console.log('WebSocket Service: Attempting to send message:', message, 'Socket state:', socket?.readyState, 'Status:', connectionStatus);
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify(message));
+        console.log('WebSocket Service: Message sent successfully');
     } else {
-        console.warn('WebSocket is not connected. Message not sent:', message);
+        console.warn('WebSocket is not connected. Message not sent:', message, 'Socket:', socket, 'Ready state:', socket?.readyState);
         // Optionally queue messages to send upon reconnection
     }
 };
 
-const subscribe = (callback) => {
+const subscribe = (callback, urlOrPath = 'ws://towerloop:1880/ws/dronemaze') => {
+    console.log('WebSocket Service: Subscribe called with URL:', urlOrPath, 'Current status:', connectionStatus);
+    console.log('WebSocket Service: Current subscribers count before adding:', subscribers.size);
     subscribers.add(callback);
+    console.log('WebSocket Service: Current subscribers count after adding:', subscribers.size);
+
+    // Connect if not already connected or connecting
+    if (connectionStatus === 'DISCONNECTED' || connectionStatus === 'ERROR') {
+        console.log('WebSocket Service: Connecting because status is:', connectionStatus);
+        connect(urlOrPath);
+    }
+
     // Immediately notify new subscriber of current status
     callback({ type: 'status', payload: connectionStatus });
     return () => {
+        console.log('WebSocket Service: Unsubscribing callback, subscribers before removal:', subscribers.size);
         subscribers.delete(callback);
+        console.log('WebSocket Service: Subscribers after removal:', subscribers.size);
     };
 };
 
 const notifySubscribers = (message) => {
-    subscribers.forEach(callback => {
+    // console.log('WebSocket Service: Notifying', subscribers.size, 'subscribers with message:', message);
+    subscribers.forEach((callback, index) => {
         try {
+            // console.log('WebSocket Service: Calling subscriber', index + 1);
             callback(message);
         } catch (error) {
             console.error('Error in subscriber callback:', error);
@@ -88,12 +103,8 @@ const notifySubscribers = (message) => {
     });
 };
 
-// Initialize connection when the service is loaded
-// if (targetUrl) {
-//     connect(targetUrl);
-// } else {
-//     console.error("WebSocket URL is not defined. Please configure WS_URL in map.js");
-// }
+// Initialize connection when the service is loaded - now handled by first subscriber
+// Connection will be established when the first component subscribes
 
 // Heartbeat: Send ping every 30 seconds to keep the connection alive
 setInterval(() => {

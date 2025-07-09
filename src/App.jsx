@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'; // Import useLocation
 import DroneMap from './DroneMap';
 import VentMap from './VentMap';
 import VideoScreen from './VideoScreen'; // Import VideoScreen
+import Microfilm from './Microfilm'; // Import Microfilm
 import './index.css';
 
 const App = () => {
@@ -16,6 +17,10 @@ const App = () => {
 
   if (mapType === 'video') {
     return <VideoScreen />;
+  }
+
+  if (mapType === 'microfilm') {
+    return <Microfilm />;
   }
 
   // Default to DroneMap if no specific map type is requested or if it's 'drone'

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Added useState, useEffect, and useCallback
+import React, { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
 import './index.css';
 import { WALL, DOOR, VENT, GOAL, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
 import { websocketService } from './websocketService'; // Import the service
@@ -11,6 +11,18 @@ const VentMap = () => {
     const [dronePosition, setDronePosition] = useState({ x: -1, y: -1 }); // To show drone on vent map
     const [verticalMode, setVerticalMode] = useState('down'); // Added vertical mode state
     const [highlightedKey, setHighlightedKey] = useState(null); // For visual feedback
+
+    const gridRef = useRef(grid); // Ref to always have latest grid
+    const verticalModeRef = useRef(verticalMode); // Ref to always have latest vertical mode
+
+    // Update refs when state changes
+    useEffect(() => {
+        gridRef.current = grid;
+    }, [grid]);
+
+    useEffect(() => {
+        verticalModeRef.current = verticalMode;
+    }, [verticalMode]);
 
     useEffect(() => {
         const fetchMap = async () => {
@@ -36,48 +48,60 @@ const VentMap = () => {
         fetchMap();
     }, []);
 
-    useEffect(() => {
-        const unsubscribe = websocketService.subscribe(message => {
-            if (message.type === 'status') {
-                console.log('VentMap WebSocket Status:', message.payload);
-            }
-            // Update dronePosition from any movement message
-            if (message.type === 'drone_position' || message.type === 'move') {
-                if (typeof message.payload?.x === 'number' && typeof message.payload?.y === 'number') {
-                    // Check if moving to a non-vent while in UP mode
-                    if (grid.length > 0 && message.payload.y < grid.length && message.payload.x < grid[0].length) {
+    // Message handler function that uses refs to get latest values
+    const handleWebSocketMessage = useCallback((message) => {
+        console.log('VentMap: Received WebSocket message:', message);
 
-                        const newCell = grid[message.payload.y] && grid[message.payload.y][message.payload.x];
-                        console.log('VentMap: Received drone position update:', message.payload, newCell, verticalMode);
-                        if (newCell !== VENT) {
-                            console.log('VentMap: Moved to non-vent, switching to DOWN');
-                            // setVerticalMode('down');
-                            websocketService.sendMessage({
-                                type: 'vertical_mode_change',
-                                payload: { verticalMode: 'down' }
-                            });
-                        }
+        if (message.type === 'status') {
+            console.log('VentMap WebSocket Status:', message.payload);
+        }
+        // Update dronePosition from any movement message
+        else if (message.type === 'drone_position' || message.type === 'move') {
+            if (typeof message.payload?.x === 'number' && typeof message.payload?.y === 'number') {
+                // Check if moving to a non-vent while in UP mode - use ref for latest grid
+                const currentGrid = gridRef.current;
+                const currentVerticalMode = verticalModeRef.current;
+
+                if (currentGrid.length > 0 && message.payload.y < currentGrid.length && message.payload.x < currentGrid[0].length) {
+                    const newCell = currentGrid[message.payload.y] && currentGrid[message.payload.y][message.payload.x];
+                    console.log('VentMap: Received drone position update:', message.payload, newCell, currentVerticalMode);
+                    if (newCell !== VENT) {
+                        console.log('VentMap: Moved to non-vent, switching to DOWN');
+                        websocketService.sendMessage({
+                            type: 'vertical_mode_change',
+                            payload: { verticalMode: 'down' }
+                        });
                     }
-
-                    // Update drone position
-                    setDronePosition(prevPos => {
-                        if (prevPos.x !== message.payload.x || prevPos.y !== message.payload.y) {
-                            return { x: message.payload.x, y: message.payload.y };
-                        }
-                        return prevPos;
-                    });
                 }
-            }
-            // Listen for vertical mode changes from DroneMap
-            if (message.type === 'vertical_mode_change') {
-                setVerticalMode(message.payload.verticalMode);
-            }
-        });
 
-        websocketService.connect('ws://towerloop:1880/ws/dronemaze'); // Ensure connection is attempted
+                // Update drone position
+                setDronePosition(prevPos => {
+                    if (prevPos.x !== message.payload.x || prevPos.y !== message.payload.y) {
+                        return { x: message.payload.x, y: message.payload.y };
+                    }
+                    return prevPos;
+                });
+            }
+        }
+        // Listen for vertical mode changes from DroneMap
+        else if (message.type === 'vertical_mode_change') {
+            setVerticalMode(message.payload.verticalMode);
+        }
+        // Listen for page refresh events
+        else if (message.type === 'refresh_page') {
+            console.log('VentMap: Received refresh_page event, reloading...');
+            window.location.reload();
+        }
+        else {
+            console.log('VentMap: Unhandled message type:', message.type, message);
+        }
+    }, []);
 
+    // WebSocket subscription - only run once on mount
+    useEffect(() => {
+        const unsubscribe = websocketService.subscribe(handleWebSocketMessage, 'ws://towerloop:1880/ws/dronemaze');
         return unsubscribe; // Clean up subscription on unmount
-    }, [grid]);
+    }, [handleWebSocketMessage]);
 
     // Handle vertical mode toggle
     const toggleVerticalMode = useCallback(() => {

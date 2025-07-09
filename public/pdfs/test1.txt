@@ -1,0 +1,9 @@
+This is a sample PDF content for testing the microfilm viewer. 
+
+Project Alpha - Classified Document
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+CONFIDENTIAL - FOR AUTHORIZED PERSONNEL ONLY
+
+This document contains sensitive information regarding Project Alpha operations.
