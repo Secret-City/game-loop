@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+const isProduction = process.env.NODE_ENV === 'production';
+const basePath = isProduction ? '/game-loop/dist/' : '/';
 
 // Mock document viewer using images instead of PDFs
 
@@ -9,7 +11,7 @@ const documentData = {
         docId: "recalibrate",
         name: "Project Alpha",
         images: [
-            "/pdfs/recalibrate_1.jpg",
+            `${basePath}pdfs/recalibrate_1.jpg`,
         ]
     },
     "xhjym": {
@@ -17,9 +19,9 @@ const documentData = {
         docId: "undoctored",
         name: "Admin Manual",
         images: [
-            "/pdfs/undoctored_1.jpg",
-            "/pdfs/undoctored_2.jpg",
-            "/pdfs/undoctored_3.jpg"
+            `${basePath}pdfs/undoctored_1.jpg`,
+            `${basePath}pdfs/undoctored_2.jpg`,
+            `${basePath}pdfs/undoctored_3.jpg`
         ]
     }
 };
@@ -613,7 +615,7 @@ const Microfilm = () => {
                                                 return (
                                                     <img
                                                         key={index}
-                                                        src={`/keys/key_${char.toLowerCase()}.png`}
+                                                        src={`${basePath}keys/key_${char.toLowerCase()}.png`}
                                                         alt={char}
                                                         style={styles.codeImage}
                                                         onError={(e) => {
@@ -660,7 +662,7 @@ const Microfilm = () => {
                                                 }}
                                             >
                                                 <img
-                                                    src={`/keys/key_${key.toLowerCase()}.png`}
+                                                    src={`${basePath}keys/key_${key.toLowerCase()}.png`}
                                                     alt={key}
                                                     style={styles.keyImage}
                                                     onError={(e) => {

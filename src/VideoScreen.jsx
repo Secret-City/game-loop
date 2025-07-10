@@ -288,9 +288,9 @@ function VideoScreen() {
                 // Handle sound messages
                 if (parsedMsg.sound_type) {
                     if (parsedMsg.sound_type === 'music') {
-                        playMusic(parsedMsg.url);
+                        playMusic(`${basePath}${parsedMsg.url}`);
                     } else if (parsedMsg.sound_type === 'sound') {
-                        playSound(parsedMsg.url);
+                        playSound(`${basePath}${parsedMsg.url}`);
                     } else {
                         console.warn('Unknown sound_type:', parsedMsg.sound_type);
                     }
