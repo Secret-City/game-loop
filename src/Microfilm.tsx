@@ -288,28 +288,41 @@ const styles = {
     },
     viewerMain: {
         flex: 1,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    floatingControls: {
+        position: 'absolute',
+        top: '20px',
+        left: '20px',
+        right: '20px',
         display: 'flex',
-        padding: '20px',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
         gap: '20px',
+        zIndex: 100,
+        pointerEvents: 'none',
     },
     controlPanel: {
-        width: '200px',
-        background: '#2a2a4e',
-        border: '2px solid #555',
-        borderRadius: '10px',
-        padding: '20px',
+        background: 'rgba(42, 42, 78, 0.95)',
+        border: '1px solid #555',
+        borderRadius: '8px',
+        padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
-        boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.3)',
+        gap: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(10px)',
+        pointerEvents: 'auto',
+        minWidth: '140px',
     },
     controlGroup: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '6px',
     },
     controlLabel: {
-        fontSize: '12px',
+        fontSize: '10px',
         color: '#00ffff',
         textAlign: 'center',
         textTransform: 'lowercase',
@@ -319,20 +332,22 @@ const styles = {
     knobContainer: {
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        gap: '6px',
         background: '#1a1a3e',
         border: '1px solid #444',
-        borderRadius: '20px',
-        padding: '5px 10px',
+        borderRadius: '12px',
+        padding: '4px 8px',
     },
     knobButton: {
-        width: '30px',
-        height: '30px',
+        width: '24px',
+        height: '24px',
         background: 'linear-gradient(145deg, #4a4a6e, #3a3a5e)',
         border: '1px solid #666',
         borderRadius: '50%',
         color: '#00ffff',
         fontWeight: 'bold',
+        fontSize: '12px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex',
@@ -340,18 +355,21 @@ const styles = {
         justifyContent: 'center',
     },
     knobDisplay: {
-        fontSize: '12px',
+        fontSize: '10px',
         color: '#00ff00',
         textShadow: '0 0 5px #00ff00',
-        minWidth: '60px',
+        minWidth: '40px',
         textAlign: 'center',
     },
     documentViewport: {
-        flex: 1,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         background: '#000',
         border: '4px solid #333',
         borderRadius: '15px',
-        position: 'relative',
         overflow: 'hidden',
         boxShadow: 'inset 0 0 30px rgba(0, 255, 255, 0.2), 0 0 20px rgba(0, 255, 255, 0.3)',
     },
@@ -390,44 +408,46 @@ const styles = {
     pageControls: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '6px',
         alignItems: 'center',
     },
     pageButton: {
         background: 'linear-gradient(145deg, #4a4a6e, #3a3a5e)',
-        border: '2px solid #666',
-        borderRadius: '5px',
+        border: '1px solid #666',
+        borderRadius: '4px',
         color: '#00ffff',
-        padding: '8px 12px',
+        padding: '6px 10px',
         fontFamily: "'Courier New', monospace",
-        fontSize: '10px',
+        fontSize: '9px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         textShadow: '0 0 5px #00ffff',
         width: '100%',
+        minWidth: '60px',
     },
     pageDisplay: {
-        fontSize: '12px',
+        fontSize: '10px',
         color: '#00ff00',
         textShadow: '0 0 5px #00ff00',
         textAlign: 'center',
         background: '#1a1a3e',
         border: '1px solid #444',
-        borderRadius: '5px',
-        padding: '5px 10px',
+        borderRadius: '4px',
+        padding: '4px 8px',
+        minWidth: '50px',
     },
     statusPanel: {
-        marginTop: '20px',
-        padding: '15px',
+        marginTop: '12px',
+        padding: '8px',
         background: '#1a1a3e',
         border: '1px solid #444',
-        borderRadius: '5px',
+        borderRadius: '4px',
     },
     statusItem: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginBottom: '8px',
-        fontSize: '10px',
+        marginBottom: '4px',
+        fontSize: '8px',
     },
     statusLabel: {
         color: '#888',
@@ -712,31 +732,65 @@ const Microfilm = () => {
                 </div>
 
                 <div style={styles.viewerMain}>
-                    <div style={styles.controlPanel}>
-                        <div style={styles.controlGroup}>
-                            <div style={styles.controlLabel}>ZOOM</div>
-                            <div style={styles.knobContainer}>
-                                <button style={styles.knobButton} onClick={handleZoomOut}>-</button>
-                                <div style={styles.knobDisplay}>{(scale * 100).toFixed(0)}%</div>
-                                <button style={styles.knobButton} onClick={handleZoomIn}>+</button>
+                    <div style={styles.floatingControls}>
+                        <div style={styles.controlPanel}>
+                            <div style={styles.controlGroup}>
+                                <div style={styles.controlLabel}>ZOOM</div>
+                                <div style={styles.knobContainer}>
+                                    <button style={styles.knobButton} onClick={handleZoomOut}>-</button>
+                                    <div style={styles.knobDisplay}>{(scale * 100).toFixed(0)}%</div>
+                                    <button style={styles.knobButton} onClick={handleZoomIn}>+</button>
+                                </div>
+                            </div>
+
+                            <div style={styles.controlGroup}>
+                                <div style={styles.controlLabel}>POSITION</div>
+                                <div style={styles.knobContainer}>
+                                    <button style={styles.knobButton} onClick={() => handlePositionChange('x', -20)}>←</button>
+                                    <button style={styles.knobButton} onClick={() => handlePositionChange('y', -20)}>↑</button>
+                                    <button style={styles.knobButton} onClick={() => handlePositionChange('y', 20)}>↓</button>
+                                    <button style={styles.knobButton} onClick={() => handlePositionChange('x', 20)}>→</button>
+                                </div>
                             </div>
                         </div>
 
-                        <div style={styles.controlGroup}>
-                            <div style={styles.controlLabel}>X-AXIS</div>
-                            <div style={styles.knobContainer}>
-                                <button style={styles.knobButton} onClick={() => handlePositionChange('x', -20)}>←</button>
-                                <div style={styles.knobDisplay}>{position.x}</div>
-                                <button style={styles.knobButton} onClick={() => handlePositionChange('x', 20)}>→</button>
+                        <div style={styles.controlPanel}>
+                            <div style={styles.controlGroup}>
+                                <div style={styles.controlLabel}>PAGE</div>
+                                <div style={styles.pageControls}>
+                                    <button
+                                        style={styles.pageButton}
+                                        onClick={() => changePage('prev')}
+                                        disabled={pageNumber <= 1}
+                                    >
+                                        ← PREV
+                                    </button>
+                                    <div style={styles.pageDisplay}>
+                                        {pageNumber} / {numPages || 1}
+                                    </div>
+                                    <button
+                                        style={styles.pageButton}
+                                        onClick={() => changePage('next')}
+                                        disabled={pageNumber >= numPages}
+                                    >
+                                        NEXT →
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div style={styles.controlGroup}>
-                            <div style={styles.controlLabel}>Y-AXIS</div>
-                            <div style={styles.knobContainer}>
-                                <button style={styles.knobButton} onClick={() => handlePositionChange('y', -20)}>↑</button>
-                                <div style={styles.knobDisplay}>{position.y}</div>
-                                <button style={styles.knobButton} onClick={() => handlePositionChange('y', 20)}>↓</button>
+                            <div style={styles.statusPanel}>
+                                <div style={styles.statusItem}>
+                                    <span style={styles.statusLabel}>MAG:</span>
+                                    <span style={styles.statusValue}>{(scale * 100).toFixed(0)}%</span>
+                                </div>
+                                <div style={styles.statusItem}>
+                                    <span style={styles.statusLabel}>POS:</span>
+                                    <span style={styles.statusValue}>{position.x},{position.y}</span>
+                                </div>
+                                <div style={styles.statusItem}>
+                                    <span style={styles.statusLabel}>DOC:</span>
+                                    <span style={styles.statusValue}>{currentFile?.docId || 'NONE'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -784,46 +838,6 @@ const Microfilm = () => {
                                         NO DOCUMENT LOADED
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={styles.controlPanel}>
-                        <div style={styles.controlGroup}>
-                            <div style={styles.controlLabel}>PAGE</div>
-                            <div style={styles.pageControls}>
-                                <button
-                                    style={styles.pageButton}
-                                    onClick={() => changePage('prev')}
-                                    disabled={pageNumber <= 1}
-                                >
-                                    ← PREV
-                                </button>
-                                <div style={styles.pageDisplay}>
-                                    {pageNumber} / {numPages || 1}
-                                </div>
-                                <button
-                                    style={styles.pageButton}
-                                    onClick={() => changePage('next')}
-                                    disabled={pageNumber >= numPages}
-                                >
-                                    NEXT →
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={styles.statusPanel}>
-                            <div style={styles.statusItem}>
-                                <span style={styles.statusLabel}>MAGNIFICATION:</span>
-                                <span style={styles.statusValue}>{(scale * 100).toFixed(0)}%</span>
-                            </div>
-                            <div style={styles.statusItem}>
-                                <span style={styles.statusLabel}>POSITION:</span>
-                                <span style={styles.statusValue}>X:{position.x} Y:{position.y}</span>
-                            </div>
-                            <div style={styles.statusItem}>
-                                <span style={styles.statusLabel}>DOCUMENT:</span>
-                                <span style={styles.statusValue}>{currentFile?.docId || 'NONE'}</span>
                             </div>
                         </div>
                     </div>

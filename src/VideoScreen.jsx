@@ -186,7 +186,7 @@ function VideoScreen() {
         // Create and play new music
         const audio = new Audio(url);
         audio.loop = true; // Music typically loops
-        audio.volume = 0.05; // Adjust volume as needed
+        audio.volume = 0.10; // Adjust volume as needed
 
         audio.play().then(() => {
             console.log('Music started successfully');
