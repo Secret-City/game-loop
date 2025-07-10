@@ -4,17 +4,47 @@ const basePath = isProduction ? '/game-loop/dist/' : '/';
 
 // Mock document viewer using images instead of PDFs
 
-// Document data with access codes and image arrays
-const documentData = {
-    "iukac": {
-        code: "iukac",
-        docId: "recalibrate",
-        name: "Project Alpha",
-        images: [
-            `${basePath}pdfs/recalibrate_1.jpg`,
-        ]
-    },
-    "xhjym": {
+// Helper function to generate all permutations of a string
+const generatePermutations = (str: string): string[] => {
+    if (str.length <= 1) return [str];
+
+    const permutations: string[] = [];
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const remainingChars = str.slice(0, i) + str.slice(i + 1);
+        const remainingPermutations = generatePermutations(remainingChars);
+
+        for (const perm of remainingPermutations) {
+            permutations.push(char + perm);
+        }
+    }
+    return permutations;
+};
+
+// Generate all permutations of "iukac" for the recalibrate document
+const iukacPermutations = generatePermutations("iukac");
+const recalibrateDoc = {
+    docId: "recalibrate",
+    name: "Project Alpha",
+    images: [
+        `${basePath}pdfs/recalibrate_1.jpg`,
+    ]
+};
+
+// Create document data object with all permutations
+const createDocumentData = () => {
+    const data: any = {};
+
+    // Add all permutations of "iukac" for recalibrate document
+    iukacPermutations.forEach(code => {
+        data[code] = {
+            code: code,
+            ...recalibrateDoc
+        };
+    });
+
+    // Add the original undoctored document
+    data["xhjym"] = {
         code: "xhjym",
         docId: "undoctored",
         name: "Admin Manual",
@@ -23,8 +53,13 @@ const documentData = {
             `${basePath}pdfs/undoctored_2.jpg`,
             `${basePath}pdfs/undoctored_3.jpg`
         ]
-    }
+    };
+
+    return data;
 };
+
+// Document data with access codes and image arrays
+const documentData = createDocumentData();
 
 // Styles object containing all CSS
 const styles = {
@@ -604,6 +639,47 @@ const Microfilm = () => {
             setPageNumber(pageNumber + 1);
         }
     };
+
+    // Add keyboard event listener for physical keyboard input
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Only handle keyboard input when on password screen
+            if (currentScreen !== 'password' || errorAnimation) return;
+
+            const key = event.key.toLowerCase();
+            
+            // Handle letter keys
+            if (key.length === 1 && /[a-z]/.test(key)) {
+                event.preventDefault();
+                handleKeyPress(key.toUpperCase());
+            }
+            // Handle Enter key for submit
+            else if (key === 'enter') {
+                event.preventDefault();
+                handleSubmitCode();
+            }
+            // Handle Backspace/Delete for clear last character
+            else if (key === 'backspace' || key === 'delete') {
+                event.preventDefault();
+                if (inputCode.length > 0) {
+                    setInputCode(prev => prev.slice(0, -1));
+                }
+            }
+            // Handle Escape for clear all
+            else if (key === 'escape') {
+                event.preventDefault();
+                handleClearCode();
+            }
+        };
+
+        // Add event listener
+        window.addEventListener('keydown', handleKeyDown);
+        
+        // Cleanup
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [currentScreen, errorAnimation, inputCode]);
 
     if (currentScreen === 'password') {
         return (
