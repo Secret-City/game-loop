@@ -647,7 +647,7 @@ const Microfilm = () => {
             if (currentScreen !== 'password' || errorAnimation) return;
 
             const key = event.key.toLowerCase();
-            
+
             // Handle letter keys
             if (key.length === 1 && /[a-z]/.test(key)) {
                 event.preventDefault();
@@ -674,7 +674,7 @@ const Microfilm = () => {
 
         // Add event listener
         window.addEventListener('keydown', handleKeyDown);
-        
+
         // Cleanup
         return () => {
             window.removeEventListener('keydown', handleKeyDown);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { websocketService } from './websocketService';
+import SecurityDashboard from './SecurityDashboard';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const basePath = isProduction ? '/game-loop/dist/' : '/';
@@ -21,6 +22,13 @@ const styles = {
         width: '100%',
         paddingTop: `${100 / aspectRatio}%`, // Calculated from JS variable
         background: 'black',
+        border: '4px solid transparent', // Transparent border to maintain consistent sizing
+        boxSizing: 'border-box', // Ensure border is included in dimensions
+    },
+    videoContainerHighlighted: {
+        border: '4px solid rgba(255, 51, 51, 0.3)', // Start with low opacity border
+        boxShadow: '0 0 15px rgba(255, 51, 51, 0.3), inset 0 0 15px rgba(255, 51, 51, 0.1)', // Start with low opacity glow
+        animation: 'redGlow 2s ease-in-out infinite',
     },
     video: {
         position: 'absolute',
@@ -59,8 +67,17 @@ const styles = {
         left: '10px',
     },
     bottomRight: {
-        bottom: '10px',
-        right: '10px',
+        bottom: '0px',
+        right: '0px',
+        background: "#fff",
+        width: '32px',
+        height: '70px',
+        color: "#000",
+        textAlign: "right",
+        font: "monospace",
+    },
+    bottomRightCode: {
+        paddingTop: "40px"
     },
     loadingOverlay: {
         position: 'absolute',
@@ -135,7 +152,33 @@ function VideoScreen() {
     const [loadingStarted, setLoadingStarted] = useState(false);
     const [videoSources, setVideoSources] = useState(createInitialVideoSources);
     const [audioEnabled, setAudioEnabled] = useState(false);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [highlightedScreens, setHighlightedScreens] = useState({});
+    const [screenCodes, setScreenCodes] = useState({});
     const videoRefs = useRef({});
+
+    // Inject CSS animations for red glow effect
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes redGlow {
+                0% { 
+                    border-color: rgba(255, 51, 51, 0.3);
+                    box-shadow: 0 0 15px rgba(255, 51, 51, 0.3), inset 0 0 15px rgba(255, 51, 51, 0.1);
+                }
+                50% { 
+                    border-color: rgba(255, 51, 51, 1);
+                    box-shadow: 0 0 40px rgba(255, 51, 51, 1), inset 0 0 40px rgba(255, 51, 51, 0.6);
+                }
+                100% { 
+                    border-color: rgba(255, 51, 51, 0.3);
+                    box-shadow: 0 0 15px rgba(255, 51, 51, 0.3), inset 0 0 15px rgba(255, 51, 51, 0.1);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
 
     // Audio refs for music and sound management
     const musicRef = useRef(null);
@@ -305,24 +348,51 @@ function VideoScreen() {
                 }
 
                 // Handle video update messages
-                if (parsedMsg.screen == null || parsedMsg.screen === undefined || parsedMsg.sequence == null || parsedMsg.sequence === undefined) {
-                    console.warn("Invalid message format, missing screen or sequence:", parsedMsg, parsedMsg.sequence, parsedMsg.screen);
+                if (parsedMsg.screen == null || parsedMsg.screen === undefined) {
+                    console.warn("Invalid message format, missing screen:", parsedMsg);
                     return;
                 }
-                const { screen, sequence } = parsedMsg;
+
+                const { screen } = parsedMsg;
                 const screenNum = parseInt(screen, 10);
+
+                // Handle dashboard data for screen 9
+                if (screenNum === 9) {
+                    // For screen 9, we expect dashboard data instead of sequence
+                    setDashboardData(parsedMsg);
+                    console.log(`Screen 9 dashboard data updated:`, parsedMsg);
+                    return;
+                }                // Handle regular video updates for screens 1-8
+                if (parsedMsg.sequence == null || parsedMsg.sequence === undefined) {
+                    console.warn("Invalid message format, missing sequence:", parsedMsg);
+                    return;
+                }
+
+                const { sequence, highlight, code } = parsedMsg;
                 const filename = sequence; // sequence is now the full filename
 
-                if (screenNum >= 1 && screenNum <= 9 && filename) {
+                if (screenNum >= 1 && screenNum <= 8 && filename) {
                     const newSrc = `${basePath}security/${filename}`;
                     setVideoSources(prevSources => ({
                         ...prevSources,
                         [screenNum]: newSrc
                     }));
 
+                    // Update highlight state for this screen
+                    setHighlightedScreens(prevHighlights => ({
+                        ...prevHighlights,
+                        [screenNum]: highlight === true
+                    }));
+
+                    // Update code for this screen
+                    setScreenCodes(prevCodes => ({
+                        ...prevCodes,
+                        [screenNum]: code || ""
+                    }));
+
                     // The `autoPlay` prop on the <video> element will handle playing the new source.
                     // Calling load() and play() imperatively can cause race conditions.
-                    console.log(`Screen ${screenNum} updated to filename: ${filename}`);
+                    console.log(`Screen ${screenNum} updated to filename: ${filename}, highlighted: ${highlight === true}, code: ${code || ""}`);
                 }
                 // }
             } catch (err) {
@@ -377,31 +447,44 @@ function VideoScreen() {
     return (
         <div style={styles.videoGrid}>
             {[1, 2, 3, 4, 9, 5, 6, 7, 8].map(screenNum => (
-                <div key={screenNum} style={styles.videoContainer}>
-                    {videoSources[screenNum].toLowerCase().includes('.png') ? (
-                        <img
-                            ref={el => videoRefs.current[screenNum] = el}
-                            style={styles.video}
-                            src={videoSources[screenNum]}
-                            alt={`Screen ${screenNum}`}
-                        />
+                <div
+                    key={screenNum}
+                    style={{
+                        ...styles.videoContainer,
+                        ...(highlightedScreens[screenNum] ? styles.videoContainerHighlighted : {})
+                    }}
+                >
+                    {screenNum === 9 ? (
+                        <SecurityDashboard dashboardData={dashboardData} />
                     ) : (
-                        <video
-                            ref={el => videoRefs.current[screenNum] = el}
-                            style={styles.video}
-                            src={videoSources[screenNum]}
-                            autoPlay
-                            {...(videoSources[screenNum].split('/').pop().toLowerCase().includes('loop') ? { loop: true } : {})}
-                            muted
-                            playsInline
-                        />
+                        <>
+                            {videoSources[screenNum].toLowerCase().includes('.png') ? (
+                                <img
+                                    ref={el => videoRefs.current[screenNum] = el}
+                                    style={styles.video}
+                                    src={videoSources[screenNum]}
+                                    alt={`Screen ${screenNum}`}
+                                />
+                            ) : (
+                                <video
+                                    ref={el => videoRefs.current[screenNum] = el}
+                                    style={styles.video}
+                                    src={videoSources[screenNum]}
+                                    autoPlay
+                                    {...(videoSources[screenNum].split('/').pop().toLowerCase().includes('loop') ? { loop: true } : {})}
+                                    muted
+                                    playsInline
+                                />
+                            )}
+                            <div style={styles.videoOverlay}>
+                                {/* <div style={{ ...styles.overlayCorner, ...styles.topLeft }}></div>
+                                <div style={{ ...styles.overlayCorner, ...styles.topRight }}>CAM 0{screenNum}</div>
+                                <div style={{ ...styles.overlayCorner, ...styles.bottomLeft }}></div>
+                                 */}
+                                <div style={{ ...styles.overlayCorner, ...styles.bottomRight }}><p style={styles.bottomRightCode}>{screenCodes[screenNum] || ""}</p></div>
+                            </div>
+                        </>
                     )}
-                    <div style={styles.videoOverlay}>
-                        {/* <div style={{ ...styles.overlayCorner, ...styles.topLeft }}></div>
-                        <div style={{ ...styles.overlayCorner, ...styles.topRight }}>CAM 0{screenNum}</div>
-                        <div style={{ ...styles.overlayCorner, ...styles.bottomLeft }}></div>
-                        <div style={{ ...styles.overlayCorner, ...styles.bottomRight }}></div> */}
-                    </div>
                 </div>
             ))}
         </div>
