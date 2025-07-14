@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const BACKUP_TIME = 10 * 60 * 1000; // 10 minutes in milliseconds
+const BACKUP_TIME = 2 * 60 * 1000; // 10 minutes in milliseconds
 
 const SecurityDashboard = ({ dashboardData }) => {
     const [currentTime, setCurrentTime] = useState(Date.now());
@@ -9,6 +9,17 @@ const SecurityDashboard = ({ dashboardData }) => {
     const [collapseCountdown, setCollapseCountdown] = useState(null);
     const [timelineCollapsed, setTimelineCollapsed] = useState(false);
     const [currentPhase, setCurrentPhase] = useState("Unknown");
+
+    // State for all dashboard properties
+    const [nowPlaying, setNowPlaying] = useState("Bright new day");
+    const [securityDoors, setSecurityDoors] = useState("LOCKED");
+    const [securityFirewall, setSecurityFirewall] = useState("SECURED");
+    const [ventsExternal, setVentsExternal] = useState("CLOSED");
+    const [ventsInternal, setVentsInternal] = useState("OPEN");
+    const [ventsFlow, setVentsFlow] = useState("INWARD");
+    const [crystalIntegrity, setCrystalIntegrity] = useState("Calibrated");
+    const [crystalPower, setCrystalPower] = useState("Stable");
+    const [collapseSeconds, setCollapseSeconds] = useState(2 * 60);
 
     // Console command function - expose to window for debugging
     useEffect(() => {
@@ -157,33 +168,30 @@ Special attributes:
         return () => document.head.removeChild(style);
     }, []);
 
-    const {
-        now_playing = "Bright new day",
-        security_doors = "LOCKED",
-        security_firewall = "SECURED",
-        vents_external = "CLOSED",
-        vents_internal = "OPEN",
-        vents_flow = "INWARD",
-        last_backup = null, // Will default to 10 minutes from now if null
-        game_start = null, // Will be set when received from server
-        crystal_integrty = "Calibrated",
-        crystal_power = "Stable",
-        collapse_seconds = 10,
-        phase
-    } = dashboardData || {};
-
-    // Update phase only when provided in dashboardData
+    // Update dashboard properties only when provided in dashboardData
     useEffect(() => {
-        if (phase !== undefined) {
-            setCurrentPhase(phase);
+        if (dashboardData) {
+            console.log('Security Dashboard Data received:', dashboardData);
+
+            if (dashboardData.now_playing !== undefined) setNowPlaying(dashboardData.now_playing);
+            if (dashboardData.security_doors !== undefined) setSecurityDoors(dashboardData.security_doors);
+            if (dashboardData.security_firewall !== undefined) setSecurityFirewall(dashboardData.security_firewall);
+            if (dashboardData.vents_external !== undefined) setVentsExternal(dashboardData.vents_external);
+            if (dashboardData.vents_internal !== undefined) setVentsInternal(dashboardData.vents_internal);
+            if (dashboardData.vents_flow !== undefined) setVentsFlow(dashboardData.vents_flow);
+            if (dashboardData.crystal_integrty !== undefined) setCrystalIntegrity(dashboardData.crystal_integrty);
+            if (dashboardData.crystal_power !== undefined) setCrystalPower(dashboardData.crystal_power);
+            if (dashboardData.collapse_seconds !== undefined) setCollapseSeconds(dashboardData.collapse_seconds);
+            if (dashboardData.phase !== undefined) setCurrentPhase(dashboardData.phase);
         }
-    }, [phase]);
+    }, [dashboardData]);
 
     // Handle crystal integrity collapsing and collapsed states
     useEffect(() => {
-        if (crystal_integrty?.toLowerCase() === 'collapsing') {
+        if (crystalIntegrity?.toLowerCase() === 'collapsing') {
             // Start the countdown
-            const countdownDuration = collapse_seconds * 1000; // Convert to milliseconds
+            const countdownDuration = collapseSeconds * 1000; // Convert to milliseconds
+            console.log('Crystal is collapsing, starting countdown for', countdownDuration / 1000, 'seconds');
             const endTime = Date.now() + countdownDuration;
             setCollapseCountdown(endTime);
             setTimelineCollapsed(false);
@@ -195,40 +203,44 @@ Special attributes:
             }, countdownDuration);
 
             return () => clearTimeout(timeout);
-        } else if (crystal_integrty?.toLowerCase() === 'collapsed') {
+        } else if (crystalIntegrity?.toLowerCase() === 'collapsed') {
             // Go directly to collapsed state without countdown
             setCollapseCountdown(null);
             setTimelineCollapsed(true);
         } else {
-            // Reset collapse states if crystal_integrty is not "collapsing" or "collapsed"
+            // Reset collapse states if crystalIntegrity is not "collapsing" or "collapsed"
             setCollapseCountdown(null);
             setTimelineCollapsed(false);
         }
-    }, [crystal_integrty, collapse_seconds]);
+    }, [crystalIntegrity, collapseSeconds]);
 
     // Set game start time when component mounts or game_start changes
     useEffect(() => {
-        if (game_start) {
-            setGameStartTime(game_start);
+        if (dashboardData?.game_start) {
+            setGameStartTime(dashboardData.game_start);
         }
         // Don't set default if game_start is not present
-    }, [game_start]);
+    }, [dashboardData?.game_start]);
 
     // Set backup end time when component mounts or last_backup changes
     useEffect(() => {
-        if (last_backup && last_backup !== -1) {
-            // Add BACKUP_TIME to last_backup to get the end time (last_backup is the start time)
-            const endTime = last_backup + BACKUP_TIME;
-            console.log('Setting backupEndTime from last_backup:', last_backup, 'Date:', new Date(last_backup));
-            console.log('Adding BACKUP_TIME, endTime:', endTime, 'Date:', new Date(endTime));
-            setBackupEndTime(endTime);
-        } else if (last_backup === -1) {
-            // If last_backup is -1, set backupEndTime to null to show static 10:00
-            console.log('last_backup is -1, setting backupEndTime to null');
-            setBackupEndTime(null);
+        if (dashboardData?.last_backup !== undefined) {
+            const last_backup = dashboardData.last_backup;
+            if (last_backup && last_backup !== -1) {
+                // last_backup is Date.now() from server, start 2-minute countdown from that time
+                const endTime = last_backup + BACKUP_TIME;
+                console.log('Starting 2-minute countdown from server time:', last_backup, 'Date:', new Date(last_backup));
+                console.log('Countdown will end at:', endTime, 'Date:', new Date(endTime));
+                console.log('Current time:', Date.now(), 'Date:', new Date(Date.now()));
+                setBackupEndTime(endTime);
+            } else if (last_backup === -1) {
+                // If last_backup is -1, set backupEndTime to null to show static 10:00
+                console.log('last_backup is -1, setting backupEndTime to null');
+                setBackupEndTime(null);
+            }
         }
         // Don't set default if last_backup is not present
-    }, [last_backup]);
+    }, [dashboardData?.last_backup]);
 
     // Update current time every second for countdown
     useEffect(() => {
@@ -289,7 +301,7 @@ Special attributes:
     };
 
     // Check if we're in collapsing or collapsed state
-    const isCollapsing = crystal_integrty?.toLowerCase() === 'collapsing' || crystal_integrty?.toLowerCase() === 'collapsed';
+    const isCollapsing = crystalIntegrity?.toLowerCase() === 'collapsing' || crystalIntegrity?.toLowerCase() === 'collapsed';
 
     const styles = {
         container: {
@@ -348,7 +360,7 @@ Special attributes:
         crystalSvg: {
             width: '100%',
             height: '100%',
-            filter: crystal_power === 'stable'
+            filter: crystalPower === 'stable'
                 ? 'drop-shadow(0 0 15px #00ffaa) drop-shadow(0 0 30px #00ffaa)'
                 : 'drop-shadow(0 0 8px #ff4444)',
         },
@@ -494,7 +506,7 @@ Special attributes:
     return (
         <div style={styles.container} className="scanline-effect">
             <div style={styles.header}>
-                NOW PLAYING: {now_playing.toUpperCase()}
+                NOW PLAYING: {nowPlaying.toUpperCase()}
             </div>
 
             <div style={styles.content}>
@@ -508,14 +520,14 @@ Special attributes:
                     </div>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Security Status</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(security_doors) }}>
-                            DOORS {security_doors.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(securityDoors) }}>
+                            DOORS {securityDoors.toUpperCase()}
                         </div>
                     </div>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Firewall</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(security_firewall) }}>
-                            {security_firewall.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(securityFirewall) }}>
+                            {securityFirewall.toUpperCase()}
                         </div>
                     </div>
                 </div>
@@ -524,20 +536,20 @@ Special attributes:
                 <div style={{ ...styles.corner, ...styles.topRight }}>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Internal Vents</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(vents_internal) }}>
-                            {vents_internal.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsInternal) }}>
+                            {ventsInternal.toUpperCase()}
                         </div>
                     </div>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>External Vents</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(vents_external) }}>
-                            {vents_external.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsExternal) }}>
+                            {ventsExternal.toUpperCase()}
                         </div>
                     </div>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Airflow</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(vents_flow) }}>
-                            {vents_flow.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsFlow) }}>
+                            {ventsFlow.toUpperCase()}
                         </div>
                     </div>
                 </div>
@@ -546,14 +558,14 @@ Special attributes:
                 <div style={{ ...styles.corner, ...styles.bottomLeft }}>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Crystal Integrity</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(crystal_integrty) }}>
-                            {crystal_integrty.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(crystalIntegrity) }}>
+                            {crystalIntegrity.toUpperCase()}
                         </div>
                     </div>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>Crystal Power</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(crystal_power) }}>
-                            {crystal_power.toUpperCase()}
+                        <div style={{ ...styles.statusValue, color: getStatusColor(crystalPower) }}>
+                            {crystalPower.toUpperCase()}
                         </div>
                     </div>
                 </div>
@@ -562,7 +574,7 @@ Special attributes:
                 <div style={{ ...styles.corner, ...styles.bottomRight }}>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>
-                            {isBackupNeeded() ? "Back up needed" : "Next Backup In"}
+                            {isBackupNeeded() ? "Timeline Collapsing" : "Timeline Collapse In"}
                         </div>
                         <div style={{
                             ...styles.countdown
@@ -577,7 +589,7 @@ Special attributes:
                     <div style={styles.crystal}>
                         <svg
                             style={styles.crystalSvg}
-                            className={crystal_power === 'stable' ? 'crystal-pulse' : ''}
+                            className={crystalPower === 'stable' ? 'crystal-pulse' : ''}
                             viewBox="0 0 100 120"
                             xmlns="http://www.w3.org/2000/svg"
                         >

@@ -50,9 +50,9 @@ const createDocumentData = () => {
         docId: "undoctored",
         name: "Admin Manual",
         images: [
-            `${basePath}pdfs/undoctored_1.jpg`,
-            `${basePath}pdfs/undoctored_2.jpg`,
-            `${basePath}pdfs/undoctored_3.jpg`
+            `${basePath}pdfs/undoctored_1.png`,
+            `${basePath}pdfs/undoctored_2.png`,
+            `${basePath}pdfs/undoctored_3.png`
         ]
     };
 
@@ -196,7 +196,7 @@ const styles = {
     codeImage: {
         width: '32px',
         height: '32px',
-        // filter: 'invert(1) sepia(1) saturate(5) hue-rotate(120deg) brightness(1.2)',
+        filter: 'invert(1) brightness(1.2)',
         transition: 'all 0.3s ease',
     },
     codePlaceholder: {
@@ -267,7 +267,7 @@ const styles = {
     keyImage: {
         width: '32px',
         height: '32px',
-        // filter: 'invert(1) sepia(1) saturate(5) hue-rotate(180deg) brightness(1.2)',
+        filter: 'invert(1) brightness(1.2)',
         transition: 'all 0.2s ease',
         pointerEvents: 'none',
     },
@@ -521,7 +521,7 @@ const Microfilm = () => {
 
     const viewerRef = useRef(null);
 
-    // Check for debug code in URL query string
+    // Check for debug code in URL query string - only run once on mount
     useEffect(() => {
         const urlParams = new URLSearchParams(location.search);
         const debugCode = urlParams.get('code');
@@ -541,7 +541,8 @@ const Microfilm = () => {
                 console.log('Available codes:', Object.keys(documentData));
             }
         }
-    }, [location.search]);
+        // Only run once on mount, don't interfere with normal UI flow
+    }, []);
 
     // Add CSS animations
     useEffect(() => {

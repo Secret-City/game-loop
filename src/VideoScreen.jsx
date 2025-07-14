@@ -70,14 +70,15 @@ const styles = {
         bottom: '0px',
         right: '0px',
         background: "#fff",
-        width: '32px',
-        height: '70px',
+        width: '8%',
+        height: '30%',
         color: "#000",
         textAlign: "right",
         font: "monospace",
     },
     bottomRightCode: {
-        paddingTop: "40px"
+        paddingTop: "85%",
+        fontSize: "2em",
     },
     loadingOverlay: {
         position: 'absolute',
@@ -404,15 +405,18 @@ function VideoScreen() {
                     [screenNum]: highlight === true
                 }));
 
-                // Update code for this screen
-                setScreenCodes(prevCodes => ({
-                    ...prevCodes,
-                    [screenNum]: code || ""
-                }));
+                // Update code for this screen only if code is provided
+                if (parsedMsg.hasOwnProperty('code')) {
+                    setScreenCodes(prevCodes => ({
+                        ...prevCodes,
+                        [screenNum]: code === null ? "" : code
+                    }));
+                }
 
                 // The `autoPlay` prop on the <video> element will handle playing the new source.
                 // Calling load() and play() imperatively can cause race conditions.
-                console.log(`Screen ${screenNum} updated to filename: ${filename}, highlighted: ${highlight === true}, code: ${code || ""}`);
+                const codeDisplay = parsedMsg.hasOwnProperty('code') ? (code === null ? "" : code) : "(unchanged)";
+                console.log(`Screen ${screenNum} updated to filename: ${filename}, highlighted: ${highlight === true}, code: ${codeDisplay}`);
             }
         };
 
