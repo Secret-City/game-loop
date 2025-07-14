@@ -209,7 +209,7 @@ function VideoScreen() {
             console.log('Stopping music playback, no URL provided');
             if (musicRef.current) {
                 musicRef.current.pause();
-                // musicRef.current = null;
+                musicRef.current = null;
             }
             return;
         }

@@ -19,7 +19,7 @@ const SecurityDashboard = ({ dashboardData }) => {
     const [ventsFlow, setVentsFlow] = useState("INWARD");
     const [crystalIntegrity, setCrystalIntegrity] = useState("Calibrated");
     const [crystalPower, setCrystalPower] = useState("Stable");
-    const [collapseSeconds, setCollapseSeconds] = useState(2 * 60);
+    const [collapseSeconds, setCollapseSeconds] = useState(10);
 
     // Console command function - expose to window for debugging
     useEffect(() => {
