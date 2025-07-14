@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 const isProduction = process.env.NODE_ENV === 'production';
 const basePath = isProduction ? '/game-loop/dist/' : '/';
 
@@ -27,7 +28,7 @@ const recalibrateDoc = {
     docId: "recalibrate",
     name: "Project Alpha",
     images: [
-        `${basePath}pdfs/recalibrate_1.jpg`,
+        `${basePath}pdfs/recalibrate_1.png`,
     ]
 };
 
@@ -74,6 +75,10 @@ const styles = {
         color: '#00ffff',
         overflow: 'hidden',
         position: 'relative',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
     },
     microfilmTerminal: {
         width: '800px',
@@ -191,7 +196,7 @@ const styles = {
     codeImage: {
         width: '32px',
         height: '32px',
-        filter: 'invert(1) sepia(1) saturate(5) hue-rotate(120deg) brightness(1.2)',
+        // filter: 'invert(1) sepia(1) saturate(5) hue-rotate(120deg) brightness(1.2)',
         transition: 'all 0.3s ease',
     },
     codePlaceholder: {
@@ -262,7 +267,7 @@ const styles = {
     keyImage: {
         width: '32px',
         height: '32px',
-        filter: 'invert(1) sepia(1) saturate(5) hue-rotate(180deg) brightness(1.2)',
+        // filter: 'invert(1) sepia(1) saturate(5) hue-rotate(180deg) brightness(1.2)',
         transition: 'all 0.2s ease',
         pointerEvents: 'none',
     },
@@ -501,6 +506,7 @@ const KEYBOARD_LAYOUT = [
 ];
 
 const Microfilm = () => {
+    const location = useLocation();
     const [currentScreen, setCurrentScreen] = useState('password');
     const [inputCode, setInputCode] = useState('');
     const [currentFile, setCurrentFile] = useState(null);
@@ -514,6 +520,28 @@ const Microfilm = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const viewerRef = useRef(null);
+
+    // Check for debug code in URL query string
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const debugCode = urlParams.get('code');
+
+        if (debugCode) {
+            const matchedFile = documentData[debugCode.toLowerCase()];
+            if (matchedFile) {
+                console.log('Debug mode: Loading document with code:', debugCode);
+                setCurrentFile(matchedFile);
+                setCurrentScreen('viewer');
+                setPageNumber(1);
+                setScale(1.0);
+                setPosition({ x: 0, y: 0 });
+                setNumPages(matchedFile.images.length);
+            } else {
+                console.warn('Debug mode: No document found for code:', debugCode);
+                console.log('Available codes:', Object.keys(documentData));
+            }
+        }
+    }, [location.search]);
 
     // Add CSS animations
     useEffect(() => {
@@ -540,9 +568,50 @@ const Microfilm = () => {
                 0% { transform: translateY(0); }
                 100% { transform: translateY(100vh); }
             }
+            
+            /* Disable zoom and touch interactions on mobile */
+            * {
+                touch-action: manipulation;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            
+            html, body {
+                touch-action: manipulation;
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+                zoom: 1;
+                -webkit-user-zoom: fixed;
+                -webkit-transform-origin-x: 0;
+                -webkit-transform-origin-y: 0;
+                -webkit-transform: scale(1);
+            }
         `;
         document.head.appendChild(styleSheet);
-        return () => document.head.removeChild(styleSheet);
+
+        // Add viewport meta tag to prevent zooming
+        let viewportMeta = document.querySelector('meta[name="viewport"]');
+        if (!viewportMeta) {
+            viewportMeta = document.createElement('meta');
+            viewportMeta.setAttribute('name', 'viewport');
+            document.head.appendChild(viewportMeta);
+        }
+        const originalViewportContent = viewportMeta.getAttribute('content');
+        viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no');
+
+        return () => {
+            document.head.removeChild(styleSheet);
+            // Restore original viewport if it existed
+            if (originalViewportContent) {
+                viewportMeta.setAttribute('content', originalViewportContent);
+            } else {
+                document.head.removeChild(viewportMeta);
+            }
+        };
     }, []);
 
     const handleKeyPress = (key: string) => {
@@ -896,13 +965,21 @@ const Microfilm = () => {
                                                 maxHeight: '100%',
                                                 transform: `scale(${scale})`,
                                                 transition: 'transform 0.1s ease-out',
-                                                filter: 'sepia(20%) hue-rotate(180deg) saturate(0.8) brightness(1.1)',
+                                                // filter: 'sepia(20%) hue-rotate(180deg) saturate(0.8) brightness(1.1)',
                                                 border: '2px solid #444',
-                                                boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)'
+                                                boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+                                                userSelect: 'none',
+                                                WebkitUserSelect: 'none',
+                                                MozUserSelect: 'none',
+                                                msUserSelect: 'none',
+                                                WebkitUserDrag: 'none',
+                                                WebkitTouchCallout: 'none',
+                                                pointerEvents: 'none',
                                             }}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                             }}
+                                            draggable={false}
                                         />
                                     ) : (
                                         <div style={styles.loadingIndicator}>

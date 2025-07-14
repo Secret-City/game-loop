@@ -376,7 +376,7 @@ const DroneMap = () => {
                             </div>
                             <div className="footer-info">
                                 <span>POS: X={playerPosition?.x} Y={playerPosition?.y} {gameWon ? "[TARGET LOCKED]" : ""}</span>
-                                <span>LEGEND: ▉ WALL □ PLAYER 🚪 DOOR <span className="vent-legend">V</span> VENT 🎯 GOAL</span>
+                                <span>LEGEND: <span style={{ backgroundColor: '#f44336', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> DRONE 🎯 INFILTRATOR</span>
                             </div>
                         </div>
                         <div className="aesthetic-info-area">

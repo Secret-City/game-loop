@@ -3,6 +3,39 @@ import './index.css';
 import { WALL, DOOR, VENT, GOAL, SHOW_DOORS, SHOW_VENTS, SHOW_GOAL } from './map';
 import { websocketService } from './websocketService'; // Import the service
 
+// Drone animation constants (from DroneMap.jsx)
+const propellerFrames = [
+    `
+     o     o
+      \\\\___/
+     | [_] |
+      /‾‾‾\\\\\\\\\n     o     o
+  `,
+    `
+     -     -
+      \\\\___/
+     | [_] |
+      /‾‾‾\\\\\\\\\n     -     -
+  `,
+    `
+     \\\\     /\ 
+      \\\\___/\ 
+     | [_] | 
+      /‾‾‾\\\\\\\\\ 
+     \\\\     /\ 
+  `,
+    `
+     |     |
+      \\\\___/
+     | [_] |
+      /‾‾‾\\\\\\\\\n     |     |
+  `,
+];
+
+const hoverOffsets = [-2, -1, 0, 1, 2, 1, 0, -1];
+const baseUpPosition = -20;
+const baseDownPosition = 20;
+
 const VentMap = () => {
     const [grid, setGrid] = useState([]);
     const [ventPressure, setVentPressure] = useState(50); // Example state, adjust as needed
@@ -11,6 +44,8 @@ const VentMap = () => {
     const [dronePosition, setDronePosition] = useState({ x: -1, y: -1 }); // To show drone on vent map
     const [verticalMode, setVerticalMode] = useState('down'); // Added vertical mode state
     const [highlightedKey, setHighlightedKey] = useState(null); // For visual feedback
+    const [droneFrame, setDroneFrame] = useState(0); // Animation frame for propellers
+    const [hoverFrame, setHoverFrame] = useState(0); // Animation frame for hovering
 
     const gridRef = useRef(grid); // Ref to always have latest grid
     const verticalModeRef = useRef(verticalMode); // Ref to always have latest vertical mode
@@ -46,6 +81,22 @@ const VentMap = () => {
         };
 
         fetchMap();
+    }, []);
+
+    // Drone animation effects
+    useEffect(() => {
+        const propellerInterval = setInterval(() => {
+            setDroneFrame(prev => (prev + 1) % propellerFrames.length);
+        }, 120);
+
+        const hoverInterval = setInterval(() => {
+            setHoverFrame(prev => (prev + 1) % hoverOffsets.length);
+        }, 300);
+
+        return () => {
+            clearInterval(propellerInterval);
+            clearInterval(hoverInterval);
+        };
     }, []);
 
     // Message handler function that uses refs to get latest values
@@ -168,13 +219,14 @@ const VentMap = () => {
                                     if (cell === DOOR && !SHOW_DOORS) {
                                         displayCellType = WALL;
                                     }
+                                    // Show GOAL cells regardless of SHOW_GOAL setting for VentMap
                                     return (
                                         <div
-                                            key={x}
-                                            className={`grid-cell ${displayCellType === WALL ? 'wall' :
+                                            key={x} className={`grid-cell ${displayCellType === WALL ? 'wall' :
                                                 displayCellType === DOOR ? 'door' : // Will only be 'door' if SHOW_DOORS is true
                                                     displayCellType === VENT ? 'vent' :
-                                                        ''
+                                                        displayCellType === GOAL ? 'goal-cell' : // Show GOAL cells when SHOW_GOAL is true
+                                                            ''
                                                 } ${dronePosition.x === x && dronePosition.y === y ? 'player-on-vent-map' : ''} `}
                                         >
                                             {dronePosition.x === x && dronePosition.y === y && (
@@ -201,22 +253,36 @@ const VentMap = () => {
                         ))}
                     </div>
                     <div className="footer-info">
-                        <span>LEGEND: ▉ WALL 🚪 DOOR <span className="vent-legend">V</span> VENT 🎯 GOAL</span>
+                        <span>LEGEND: <span className="vent-legend" style={{ backgroundColor: '#4CAF50', color: 'white', padding: '2px 4px', borderRadius: '2px' }}>V</span> VENT <span style={{ backgroundColor: '#f44336', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> DRONE 🎯 INFILTRATOR</span>
                     </div>
                 </div>
 
                 {/* Added drone control panel */}
                 <div className="right-column" style={{ width: '20%', paddingLeft: '10px' }}>
+                    <div className="info-pane drone-pane">
+                        <h3>DRONE VERTICAL STATUS</h3>
+                        <pre
+                            className="drone-ascii"
+                            style={{
+                                position: 'relative',
+                                transform: `translateY(${(verticalMode === 'up' ? baseUpPosition : baseDownPosition) + hoverOffsets[hoverFrame % hoverOffsets.length]}px)`
+                            }}
+                        >
+                            {propellerFrames[droneFrame % propellerFrames.length]}
+                        </pre>
+                        <p>MODE: <span className={`mode-indicator ${verticalMode}`}>{verticalMode === 'up' ? 'FLYING HIGH' : 'FLYING LOW'}</span></p>
+                        <p className="control-note">Control via Space Bar</p>
+                    </div>
                     <div className="info-pane drone-vertical-control">
                         <h3>DRONE VERTICAL CONTROL</h3>
                         <div className="vertical-mode-display">
-                            <p>MODE: <span className={`mode-indicator ${verticalMode}`}>{verticalMode.toUpperCase()}</span></p>
+                            <p>MODE: <span className={`mode-indicator ${verticalMode}`}>{verticalMode === 'up' ? 'FLYING HIGH' : 'FLYING LOW'}</span></p>
                             <div className="mode-visualization">
                                 <div className={`altitude-indicator ${verticalMode === 'up' ? 'active' : ''}`}>
-                                    ↑ UP
+                                    ↑ FLYING HIGH
                                 </div>
                                 <div className={`altitude-indicator ${verticalMode === 'down' ? 'active' : ''}`}>
-                                    ↓ DOWN
+                                    ↓ FLYING LOW
                                 </div>
                             </div>
                         </div>

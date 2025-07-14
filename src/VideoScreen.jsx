@@ -323,87 +323,123 @@ function VideoScreen() {
                 // The message might be a string, so we parse it.
                 const parsedMsg = typeof msg === 'string' ? JSON.parse(msg) : msg;
 
-                if (parsedMsg.type == "ping") {
-                    // Handle ping messages if needed, e.g., to keep the connection alive.
+                // Check if the message is an array of multiple messages
+                if (Array.isArray(parsedMsg)) {
+                    console.log("Received array of messages, processing individually:", parsedMsg);
+                    parsedMsg.forEach((individualMsg, index) => {
+                        console.log(`Processing message ${index + 1}/${parsedMsg.length}:`, individualMsg);
+                        handleSingleMessage(individualMsg);
+                    });
                     return;
                 }
 
-                // Handle sound messages
-                if (parsedMsg.sound_type) {
-                    if (parsedMsg.sound_type === 'music') {
-                        playMusic(`${basePath}${parsedMsg.url}`);
-                    } else if (parsedMsg.sound_type === 'sound') {
-                        playSound(`${basePath}${parsedMsg.url}`);
-                    } else {
-                        console.warn('Unknown sound_type:', parsedMsg.sound_type);
-                    }
-                    return;
-                }
-
-                // Handle refresh page events
-                if (parsedMsg.type === 'refresh_page') {
-                    console.log('VideoScreen: Received refresh_page event, reloading...');
-                    window.location.reload();
-                    return;
-                }
-
-                // Handle video update messages
-                if (parsedMsg.screen == null || parsedMsg.screen === undefined) {
-                    console.warn("Invalid message format, missing screen:", parsedMsg);
-                    return;
-                }
-
-                const { screen } = parsedMsg;
-                const screenNum = parseInt(screen, 10);
-
-                // Handle dashboard data for screen 9
-                if (screenNum === 9) {
-                    // For screen 9, we expect dashboard data instead of sequence
-                    setDashboardData(parsedMsg);
-                    console.log(`Screen 9 dashboard data updated:`, parsedMsg);
-                    return;
-                }                // Handle regular video updates for screens 1-8
-                if (parsedMsg.sequence == null || parsedMsg.sequence === undefined) {
-                    console.warn("Invalid message format, missing sequence:", parsedMsg);
-                    return;
-                }
-
-                const { sequence, highlight, code } = parsedMsg;
-                const filename = sequence; // sequence is now the full filename
-
-                if (screenNum >= 1 && screenNum <= 8 && filename) {
-                    const newSrc = `${basePath}security/${filename}`;
-                    setVideoSources(prevSources => ({
-                        ...prevSources,
-                        [screenNum]: newSrc
-                    }));
-
-                    // Update highlight state for this screen
-                    setHighlightedScreens(prevHighlights => ({
-                        ...prevHighlights,
-                        [screenNum]: highlight === true
-                    }));
-
-                    // Update code for this screen
-                    setScreenCodes(prevCodes => ({
-                        ...prevCodes,
-                        [screenNum]: code || ""
-                    }));
-
-                    // The `autoPlay` prop on the <video> element will handle playing the new source.
-                    // Calling load() and play() imperatively can cause race conditions.
-                    console.log(`Screen ${screenNum} updated to filename: ${filename}, highlighted: ${highlight === true}, code: ${code || ""}`);
-                }
-                // }
+                // Handle single message
+                handleSingleMessage(parsedMsg);
             } catch (err) {
                 console.error("Invalid WebSocket message:", msg, err);
             }
         };
 
+        const handleSingleMessage = (parsedMsg) => {
+            if (parsedMsg.type == "ping") {
+                // Handle ping messages if needed, e.g., to keep the connection alive.
+                return;
+            }
+
+            // Handle sound messages
+            if (parsedMsg.sound_type) {
+                if (parsedMsg.sound_type === 'music') {
+                    playMusic(`${basePath}${parsedMsg.url}`);
+                } else if (parsedMsg.sound_type === 'sound') {
+                    playSound(`${basePath}${parsedMsg.url}`);
+                } else {
+                    console.warn('Unknown sound_type:', parsedMsg.sound_type);
+                }
+                return;
+            }
+
+            // Handle refresh page events
+            if (parsedMsg.type === 'refresh_page') {
+                console.log('VideoScreen: Received refresh_page event, reloading...');
+                window.location.reload();
+                return;
+            }
+
+            // Handle video update messages
+            if (parsedMsg.screen == null || parsedMsg.screen === undefined) {
+                console.warn("Invalid message format, missing screen:", parsedMsg);
+                return;
+            }
+
+            const { screen } = parsedMsg;
+            const screenNum = parseInt(screen, 10);
+
+            // Handle dashboard data for screen 9
+            if (screenNum === 9) {
+                // For screen 9, we expect dashboard data instead of sequence
+                setDashboardData(parsedMsg);
+                console.log(`Screen 9 dashboard data updated:`, parsedMsg);
+                return;
+            }
+
+            // Handle regular video updates for screens 1-8
+            if (parsedMsg.sequence == null || parsedMsg.sequence === undefined) {
+                console.warn("Invalid message format, missing sequence:", parsedMsg);
+                return;
+            }
+
+            const { sequence, highlight, code } = parsedMsg;
+            const filename = sequence; // sequence is now the full filename
+
+            if (screenNum >= 1 && screenNum <= 8 && filename) {
+                const newSrc = `${basePath}security/${filename}`;
+                setVideoSources(prevSources => ({
+                    ...prevSources,
+                    [screenNum]: newSrc
+                }));
+
+                // Update highlight state for this screen
+                setHighlightedScreens(prevHighlights => ({
+                    ...prevHighlights,
+                    [screenNum]: highlight === true
+                }));
+
+                // Update code for this screen
+                setScreenCodes(prevCodes => ({
+                    ...prevCodes,
+                    [screenNum]: code || ""
+                }));
+
+                // The `autoPlay` prop on the <video> element will handle playing the new source.
+                // Calling load() and play() imperatively can cause race conditions.
+                console.log(`Screen ${screenNum} updated to filename: ${filename}, highlighted: ${highlight === true}, code: ${code || ""}`);
+            }
+        };
+
+        // Handle console commands for dashboard data
+        const handleConsoleCommand = (event) => {
+            console.log('VideoScreen received console command:', event.detail);
+            try {
+                // Process console commands the same way as WebSocket messages
+                // Assume console commands are for dashboard data (screen 9)
+                setDashboardData(prevData => ({
+                    ...prevData,
+                    ...event.detail
+                }));
+                console.log('Dashboard data updated from console command:', event.detail);
+            } catch (error) {
+                console.error('Error processing console command:', error);
+            }
+        };
+
         const unsubscribe = websocketService.subscribe(handleMessage, 'ws://towerloop:1880/ws/wall');
+
+        // Listen for console commands
+        window.addEventListener('security-command', handleConsoleCommand);
 
         return () => {
             unsubscribe();
+            window.removeEventListener('security-command', handleConsoleCommand);
             // Clean up audio when component unmounts
             if (musicRef.current) {
                 musicRef.current.pause();
