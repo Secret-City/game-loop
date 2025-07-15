@@ -25,10 +25,12 @@ const generatePermutations = (str: string): string[] => {
 // Generate all permutations of "iukac" for the recalibrate document
 const iukacPermutations = generatePermutations("iukac");
 const recalibrateDoc = {
-    docId: "recalibrate",
-    name: "Project Alpha",
+    docId: "undoctored",
+    name: "Admin Manual",
     images: [
-        `${basePath}pdfs/recalibrate_1.png`,
+        `${basePath}pdfs/undoctored_1.png`,
+        `${basePath}pdfs/undoctored_2.png`,
+        `${basePath}pdfs/undoctored_3.png`
     ]
 };
 
@@ -47,12 +49,11 @@ const createDocumentData = () => {
     // Add the original undoctored document
     data["xhjym"] = {
         code: "xhjym",
-        docId: "undoctored",
-        name: "Admin Manual",
+
+        docId: "recalibrate",
+        name: "Project Alpha",
         images: [
-            `${basePath}pdfs/undoctored_1.png`,
-            `${basePath}pdfs/undoctored_2.png`,
-            `${basePath}pdfs/undoctored_3.png`
+            `${basePath}pdfs/recalibrate_1.png`,
         ]
     };
 

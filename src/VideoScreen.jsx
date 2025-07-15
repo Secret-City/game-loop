@@ -203,7 +203,7 @@ function VideoScreen() {
     };
 
     // Function to handle music playback
-    const playMusic = (url) => {
+    const playMusic = (url, volume = 0.10, delay = 0) => {
         // If url is "" or undefined, stop any currently playing music
         if (!url) {
             console.log('Stopping music playback, no URL provided');
@@ -219,7 +219,7 @@ function VideoScreen() {
             return;
         }
 
-        console.log('Playing music:', url);
+        console.log('Playing music:', url, 'volume:', volume, 'delay:', delay);
 
         // Stop current music if playing
         if (musicRef.current) {
@@ -227,21 +227,30 @@ function VideoScreen() {
             musicRef.current = null;
         }
 
-        // Create and play new music
-        const audio = new Audio(url);
-        audio.loop = true; // Music typically loops
-        audio.volume = 0.10; // Adjust volume as needed
+        const playAudio = () => {
+            // Create and play new music
+            const audio = new Audio(url);
+            audio.loop = true; // Music typically loops
+            audio.volume = volume; // Use provided volume or default
 
-        audio.play().then(() => {
-            console.log('Music started successfully');
-            musicRef.current = audio;
-        }).catch(error => {
-            console.error('Failed to play music:', error);
-        });
+            audio.play().then(() => {
+                console.log('Music started successfully');
+                musicRef.current = audio;
+            }).catch(error => {
+                console.error('Failed to play music:', error);
+            });
+        };
+
+        // Apply delay if specified
+        if (delay > 0) {
+            setTimeout(playAudio, delay * 1000);
+        } else {
+            playAudio();
+        }
     };
 
     // Function to handle sound effect playback
-    const playSound = (url) => {
+    const playSound = (url, volume = 1.0, delay = 0) => {
         // If url is "" or undefined, stop any currently playing sound
         if (!url) {
             console.log('Stopping sound playback, no URL provided');
@@ -258,7 +267,7 @@ function VideoScreen() {
             return;
         }
 
-        console.log('Playing sound:', url);
+        console.log('Playing sound:', url, 'volume:', volume, 'delay:', delay);
 
         // Stop current sound if playing
         if (soundRef.current) {
@@ -266,23 +275,32 @@ function VideoScreen() {
             soundRef.current = null;
         }
 
-        // Create and play new sound
-        const audio = new Audio(url);
-        audio.volume = 1.0; // Sound effects at full volume
+        const playAudio = () => {
+            // Create and play new sound
+            const audio = new Audio(url);
+            audio.volume = volume; // Use provided volume or default
 
-        audio.play().then(() => {
-            console.log('Sound started successfully');
-            soundRef.current = audio;
+            audio.play().then(() => {
+                console.log('Sound started successfully');
+                soundRef.current = audio;
 
-            // Clean up reference when sound ends
-            audio.addEventListener('ended', () => {
-                if (soundRef.current === audio) {
-                    soundRef.current = null;
-                }
+                // Clean up reference when sound ends
+                audio.addEventListener('ended', () => {
+                    if (soundRef.current === audio) {
+                        soundRef.current = null;
+                    }
+                });
+            }).catch(error => {
+                console.error('Failed to play sound:', error);
             });
-        }).catch(error => {
-            console.error('Failed to play sound:', error);
-        });
+        };
+
+        // Apply delay if specified
+        if (delay > 0) {
+            setTimeout(playAudio, delay * 1000);
+        } else {
+            playAudio();
+        }
     };
 
     // Effect for preloading videos - only start after user interaction
@@ -349,10 +367,11 @@ function VideoScreen() {
 
             // Handle sound messages
             if (parsedMsg.sound_type) {
+                const { url, volume, delay } = parsedMsg;
                 if (parsedMsg.sound_type === 'music') {
-                    playMusic(`${basePath}${parsedMsg.url}`);
+                    playMusic(`${basePath}${url}`, volume, delay);
                 } else if (parsedMsg.sound_type === 'sound') {
-                    playSound(`${basePath}${parsedMsg.url}`);
+                    playSound(`${basePath}${url}`, volume, delay);
                 } else {
                     console.warn('Unknown sound_type:', parsedMsg.sound_type);
                 }

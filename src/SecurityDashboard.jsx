@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 
 const BACKUP_TIME = 2 * 60 * 1000; // 10 minutes in milliseconds
 
+const isProduction = process.env.NODE_ENV === 'production';
+const basePath = isProduction ? '/game-loop/dist/' : '/';
+
 const SecurityDashboard = ({ dashboardData }) => {
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [backupEndTime, setBackupEndTime] = useState(null);
@@ -9,6 +12,11 @@ const SecurityDashboard = ({ dashboardData }) => {
     const [collapseCountdown, setCollapseCountdown] = useState(null);
     const [timelineCollapsed, setTimelineCollapsed] = useState(false);
     const [currentPhase, setCurrentPhase] = useState("Unknown");
+
+    // FNL009 phase states
+    const [fnl009VideoUrl, setFnl009VideoUrl] = useState(null);
+    const [fnl009VideoComplete, setFnl009VideoComplete] = useState(false);
+    const [showTransmissionComplete, setShowTransmissionComplete] = useState(false);
 
     // State for all dashboard properties
     const [nowPlaying, setNowPlaying] = useState("Bright new day");
@@ -150,6 +158,20 @@ Special attributes:
                 50% { opacity: 0.8; }
                 100% { opacity: 1; }
             }
+            @keyframes rcbPulse {
+                0% { 
+                    background-color: rgba(255, 0, 0, 0.95);
+                    border-color: rgba(255, 0, 0, 1);
+                }
+                50% { 
+                    background-color: rgba(255, 0, 0, 0.8);
+                    border-color: rgba(255, 0, 0, 0.7);
+                }
+                100% { 
+                    background-color: rgba(255, 0, 0, 0.95);
+                    border-color: rgba(255, 0, 0, 1);
+                }
+            }
             .scanline-effect {
                 background-image: 
                     linear-gradient(90deg, transparent 50%, rgba(0, 255, 170, 0.03) 50%),
@@ -183,6 +205,14 @@ Special attributes:
             if (dashboardData.crystal_power !== undefined) setCrystalPower(dashboardData.crystal_power);
             if (dashboardData.collapse_seconds !== undefined) setCollapseSeconds(dashboardData.collapse_seconds);
             if (dashboardData.phase !== undefined) setCurrentPhase(dashboardData.phase);
+
+            // Handle FNL009 phase
+            if (dashboardData.phase === "FNL009" && dashboardData.sequence) {
+                console.log('FNL009 phase detected, setting video URL:', dashboardData.sequence);
+                setFnl009VideoUrl(`${basePath}security/${dashboardData.sequence}`);
+                setFnl009VideoComplete(false);
+                setShowTransmissionComplete(false);
+            }
         }
     }, [dashboardData]);
 
@@ -303,6 +333,9 @@ Special attributes:
     // Check if we're in collapsing or collapsed state
     const isCollapsing = crystalIntegrity?.toLowerCase() === 'collapsing' || crystalIntegrity?.toLowerCase() === 'collapsed';
 
+    // Check if we should use red theme (collapsing or FNL009 complete)
+    const useRedTheme = isCollapsing || fnl009VideoComplete;
+
     const styles = {
         container: {
             position: 'absolute',
@@ -310,23 +343,23 @@ Special attributes:
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: isCollapsing ? '#400000' : '#000810',
-            color: isCollapsing ? '#ff6666' : '#00ffaa',
+            backgroundColor: useRedTheme ? '#400000' : '#000810',
+            color: useRedTheme ? '#ff6666' : '#00ffaa',
             fontFamily: 'monospace',
             fontSize: '10px',
             display: 'flex',
             flexDirection: 'column',
-            border: `2px solid ${isCollapsing ? '#ff6666' : '#00ffaa'}`,
+            border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
             borderRadius: '4px',
             overflow: 'hidden',
             textShadow: '0 0 8px currentColor',
-            boxShadow: `inset 0 0 20px ${isCollapsing ? 'rgba(255, 102, 102, 0.2)' : 'rgba(0, 255, 170, 0.2)'}`,
+            boxShadow: `inset 0 0 20px ${useRedTheme ? 'rgba(255, 102, 102, 0.2)' : 'rgba(0, 255, 170, 0.2)'}`,
             transition: 'all 0.5s ease',
         },
         header: {
-            backgroundColor: isCollapsing ? 'rgba(80, 0, 0, 0.8)' : 'rgba(0, 20, 40, 0.8)',
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.8)' : 'rgba(0, 20, 40, 0.8)',
             padding: '4px 8px',
-            borderBottom: `1px solid ${isCollapsing ? '#ff6666' : '#00ffaa'}`,
+            borderBottom: `1px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
             textAlign: 'center',
             fontWeight: 'bold',
             fontSize: '11px',
@@ -360,7 +393,7 @@ Special attributes:
         crystalSvg: {
             width: '100%',
             height: '100%',
-            filter: crystalPower === 'stable'
+            filter: (crystalPower === 'stable' && !useRedTheme)
                 ? 'drop-shadow(0 0 15px #00ffaa) drop-shadow(0 0 30px #00ffaa)'
                 : 'drop-shadow(0 0 8px #ff4444)',
         },
@@ -387,8 +420,8 @@ Special attributes:
             padding: '8px',
             fontSize: '9px',
             lineHeight: '1.2',
-            backgroundColor: isCollapsing ? 'rgba(80, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-            border: `1px solid ${isCollapsing ? 'rgba(255, 102, 102, 0.3)' : 'rgba(0, 255, 170, 0.3)'}`,
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+            border: `1px solid ${useRedTheme ? 'rgba(255, 102, 102, 0.3)' : 'rgba(0, 255, 170, 0.3)'}`,
             borderRadius: '3px',
             backdropFilter: 'blur(2px)',
         },
@@ -475,12 +508,93 @@ Special attributes:
             textShadow: '0 0 20px #ff4444',
             animation: 'staticFlicker 0.5s infinite',
         },
+        rcb008Overlay: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(255, 0, 0, 0.95)',
+            border: '3px solid rgba(255, 0, 0, 1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            zIndex: 1000,
+            color: '#fff',
+            fontFamily: 'monospace',
+            animation: 'rcbPulse 1.5s ease-in-out infinite',
+            textAlign: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+        },
+        rcb008Title: {
+            fontSize: '18px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            textShadow: '0 0 15px #fff',
+            marginBottom: '20px',
+        },
+        rcb008CodeContainer: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '10px',
+        },
+        rcb008CodeImage: {
+            width: '32px',
+            height: '32px',
+            filter: 'brightness(0) invert(1)',
+            textShadow: '0 0 10px #fff',
+        },
+        fnl009VideoContainer: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 900,
+        },
+        fnl009Video: {
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+        },
+        transmissionCompleteOverlay: {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(255, 0, 0, 0.95)',
+            border: '3px solid #ff0000',
+            padding: '20px 30px',
+            borderRadius: '8px',
+            zIndex: 1100,
+            color: '#fff',
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            textShadow: '0 0 15px #fff',
+            animation: 'rcbPulse 2s ease-in-out infinite',
+            textAlign: 'center',
+        },
     };
 
     // Get status color based on value
     const getStatusColor = (status) => {
         // If collapsing, everything should be red
         if (isCollapsing) return '#ff6666';
+
+        // If FNL009 video is complete, everything should be red
+        if (fnl009VideoComplete) return '#ff4444';
 
         switch (status?.toLowerCase()) {
             case 'secured':
@@ -501,6 +615,18 @@ Special attributes:
             default:
                 return '#888888';
         }
+    };
+
+    // Handle video end event
+    const handleVideoEnd = () => {
+        console.log('FNL009 video completed');
+        setFnl009VideoComplete(true);
+        setShowTransmissionComplete(true);
+
+        // Hide transmission complete popup after 5 seconds
+        setTimeout(() => {
+            setShowTransmissionComplete(false);
+        }, 5000);
     };
 
     return (
@@ -589,7 +715,7 @@ Special attributes:
                     <div style={styles.crystal}>
                         <svg
                             style={styles.crystalSvg}
-                            className={crystalPower === 'stable' ? 'crystal-pulse' : ''}
+                            className={crystalPower === 'stable' && !useRedTheme ? 'crystal-pulse' : ''}
                             viewBox="0 0 100 120"
                             xmlns="http://www.w3.org/2000/svg"
                         >
@@ -597,58 +723,58 @@ Special attributes:
                             <path
                                 d="M50 5 L75 25 L75 85 L50 115 L25 85 L25 25 Z"
                                 fill="none"
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="2"
                                 opacity="0.9"
                             />
                             {/* Inner crystal facets */}
                             <path
                                 d="M50 5 L65 20 L50 60 L35 20 Z"
-                                fill={isCollapsing ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="1"
                                 opacity="0.8"
                             />
                             <path
                                 d="M25 25 L50 60 L25 85 Z"
-                                fill={isCollapsing ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="1"
                                 opacity="0.6"
                             />
                             <path
                                 d="M75 25 L50 60 L75 85 Z"
-                                fill={isCollapsing ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="1"
                                 opacity="0.6"
                             />
                             <path
                                 d="M25 85 L50 60 L50 115 L25 85 Z"
-                                fill={isCollapsing ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="1"
                                 opacity="0.8"
                             />
                             <path
                                 d="M75 85 L50 60 L50 115 L75 85 Z"
-                                fill={isCollapsing ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
+                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 strokeWidth="1"
                                 opacity="0.8"
                             />
                             {/* Inner energy lines */}
-                            <line x1="35" y1="20" x2="65" y2="20" stroke={isCollapsing ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
-                            <line x1="25" y1="40" x2="75" y2="40" stroke={isCollapsing ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
-                            <line x1="25" y1="60" x2="75" y2="60" stroke={isCollapsing ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
-                            <line x1="25" y1="80" x2="75" y2="80" stroke={isCollapsing ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
-                            <line x1="35" y1="100" x2="65" y2="100" stroke={isCollapsing ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
+                            <line x1="35" y1="20" x2="65" y2="20" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
+                            <line x1="25" y1="40" x2="75" y2="40" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
+                            <line x1="25" y1="60" x2="75" y2="60" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
+                            <line x1="25" y1="80" x2="75" y2="80" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
+                            <line x1="35" y1="100" x2="65" y2="100" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
                             {/* Center core */}
                             <circle
                                 cx="50"
                                 cy="60"
                                 r="4"
-                                fill={isCollapsing ? "#ff6666" : "#00ffaa"}
+                                fill={useRedTheme ? "#ff6666" : "#00ffaa"}
                                 opacity="0.9"
                             />
                             <circle
@@ -666,6 +792,19 @@ Special attributes:
                 </div>
             </div>
 
+            {/* FNL009 Video Overlay */}
+            {fnl009VideoUrl && !fnl009VideoComplete && (
+                <div style={styles.fnl009VideoContainer}>
+                    <video
+                        style={styles.fnl009Video}
+                        src={fnl009VideoUrl}
+                        autoPlay
+                        playsInline
+                        onEnded={handleVideoEnd}
+                    />
+                </div>
+            )}
+
             {/* Collapse Countdown Overlay */}
             {collapseCountdown && (
                 <div style={styles.collapseOverlay}>
@@ -682,6 +821,32 @@ Special attributes:
             {timelineCollapsed && (
                 <div style={styles.timelineCollapsedOverlay}>
                     Timeline Collapsed
+                </div>
+            )}
+
+            {/* RCB008 Phase Overlay */}
+            {currentPhase === "RCB008" && (
+                <div style={styles.rcb008Overlay}>
+                    <div style={styles.rcb008Title}>
+                        Contact me, recalibrate with this code
+                    </div>
+                    <div style={styles.rcb008CodeContainer}>
+                        {['x', 'h', 'j', 'y', 'm'].map((letter, index) => (
+                            <img
+                                key={index}
+                                src={`${basePath}keys/key_${letter}.png`}
+                                alt={letter}
+                                style={styles.rcb008CodeImage}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Transmission Complete Overlay */}
+            {showTransmissionComplete && (
+                <div style={styles.transmissionCompleteOverlay}>
+                    Transmission Complete
                 </div>
             )}
         </div>
