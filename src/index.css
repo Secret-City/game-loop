@@ -13,9 +13,9 @@
     --font-size-small: 10px;
     --font-size-header: 14px;
     --pane-padding: 6px;
-    --cell-size: 15px;
-    /* Increased cell size for new grid */
-    --app-max-height: 700px;
+    --cell-size: 35px;
+    /* Increased cell size for better screen filling */
+    --app-max-height: 900px;
     /* Define max app height */
 }
 
@@ -41,7 +41,7 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1024px;
+    max-width: 1450px;
     height: var(--app-max-height);
     /* Use var directly */
     max-height: var(--app-max-height);
@@ -69,8 +69,8 @@ body {
 }
 
 .terminal-container {
-    width: 1000px;
-    /* Changed from 100vw */
+    width: 1400px;
+    /* Increased width for larger cells */
     height: 100%;
     /* Changed from 100vh */
     border: 2px solid #400040;
@@ -230,7 +230,7 @@ body {
 .vent::before {
     content: 'V';
     /* Simple V for vent */
-    font-size: calc(var(--cell-size) * 0.7);
+    font-size: calc(var(--cell-size) * 0.6);
     color: #99CC99;
     /* Lighter green for V */
     font-weight: bold;
@@ -244,7 +244,7 @@ body {
 .goal-cell::before {
     content: '🎯';
     /* Target emoji or other symbol */
-    font-size: calc(var(--cell-size) * 0.7);
+    font-size: calc(var(--cell-size) * 0.6);
     color: #000;
 }
 

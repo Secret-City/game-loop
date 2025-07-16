@@ -22,15 +22,14 @@ const generatePermutations = (str: string): string[] => {
     return permutations;
 };
 
-// Generate all permutations of "iukac" for the recalibrate document
-const iukacPermutations = generatePermutations("iukac");
+// Generate all permutations of "xhjym" for the recalibrate document
+const xhjymPermutations = generatePermutations("xhjym");
 const recalibrateDoc = {
+
     docId: "undoctored",
     name: "Admin Manual",
     images: [
         `${basePath}pdfs/undoctored_1.png`,
-        `${basePath}pdfs/undoctored_2.png`,
-        `${basePath}pdfs/undoctored_3.png`
     ]
 };
 
@@ -38,8 +37,8 @@ const recalibrateDoc = {
 const createDocumentData = () => {
     const data: any = {};
 
-    // Add all permutations of "iukac" for recalibrate document
-    iukacPermutations.forEach(code => {
+    // Add all permutations of "xhjym" for recalibrate document
+    xhjymPermutations.forEach(code => {
         data[code] = {
             code: code,
             ...recalibrateDoc
@@ -47,8 +46,8 @@ const createDocumentData = () => {
     });
 
     // Add the original undoctored document
-    data["xhjym"] = {
-        code: "xhjym",
+    data["iukac"] = {
+        code: "iukac",
 
         docId: "recalibrate",
         name: "Project Alpha",

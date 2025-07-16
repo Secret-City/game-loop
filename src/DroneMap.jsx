@@ -42,9 +42,13 @@ const DroneMap = () => {
     const [highlightedKey, setHighlightedKey] = useState(null);
     const [serverStatus, setServerStatus] = useState(websocketService.getStatus()); // Get initial status
     const [lastMessage, setLastMessage] = useState('');
-    const [verticalMode, setVerticalMode] = useState('down'); // Now read-only, controlled by VentMap
     const [droneFrame, setDroneFrame] = useState(0);
     const [hoverFrame, setHoverFrame] = useState(0);
+    
+    // New dual-client control states
+    const [isSpacePressed, setIsSpacePressed] = useState(false);
+    const [clientControl, setClientControl] = useState(null); // "vents", "drone", or null
+    const [controlStatus, setControlStatus] = useState("No control active");
 
     const [ventPressure, setVentPressure] = useState(50);
     const [facilityPower, setFacilityPower] = useState(75);
@@ -60,7 +64,7 @@ const DroneMap = () => {
             try {
                 const response = await fetch(__MAP_URL__);
                 const data = await response.json();
-                const newGrid = data.initialGrid;
+                const newGrid = data.map2; // Use map2 for DroneMap
                 setGrid(newGrid);
 
                 for (let y = 0; y < newGrid.length; y++) {
@@ -97,9 +101,36 @@ const DroneMap = () => {
         const unsubscribe = websocketService.subscribe(message => {
             if (message.type === 'status') {
                 setServerStatus(message.payload);
-            } else if (message.type === 'vertical_mode_change') {
-                // Listen for vertical mode changes from VentMap
-                setVerticalMode(message.payload.verticalMode);
+            } else if (message.type === 'drone_position' || message.type === 'move') {
+                // Update drone position from any movement message
+                if (typeof message.payload?.x === 'number' && typeof message.payload?.y === 'number') {
+                    console.log('DroneMap: Received drone position update:', message.payload);
+                    setPlayerPosition(prevPos => {
+                        if (!prevPos || prevPos.x !== message.payload.x || prevPos.y !== message.payload.y) {
+                            return { x: message.payload.x, y: message.payload.y };
+                        }
+                        return prevPos;
+                    });
+                }
+            } else if (message.type === 'spacebar_down') {
+                if (message.client === 'vents') {
+                    setClientControl('drone');
+                    setControlStatus('Console 2 control active');
+                }
+            } else if (message.type === 'spacebar_up') {
+                if (message.client === 'vents') {
+                    setClientControl(null);
+                    setControlStatus('No control active');
+                }
+            } else if (message.type === 'control_update') {
+                setClientControl(message.clientControl);
+                if (message.clientControl === 'vents') {
+                    setControlStatus('Console 1 control active');
+                } else if (message.clientControl === 'drone') {
+                    setControlStatus('Console 2 control active');
+                } else {
+                    setControlStatus('No control active');
+                }
             } else if (message.type === 'refresh_page') {
                 console.log('DroneMap: Received refresh_page event, reloading...');
                 window.location.reload();
@@ -186,32 +217,55 @@ const DroneMap = () => {
 
         switch (event.key.toLowerCase()) {
             case 'arrowup':
-                newPlayerPosition.y = Math.max(0, playerPosition.y - 1);
-                setHighlightedKey('ArrowUp');
-                moved = true;
-                direction = 'NORTH';
+                if (clientControl === 'drone') {
+                    newPlayerPosition.y = Math.max(0, playerPosition.y - 1);
+                    setHighlightedKey('ArrowUp');
+                    moved = true;
+                    direction = 'NORTH';
+                } else {
+                    setConsoleLog(prevLog => [`SYSTEM: No control active. Movement blocked.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
+                }
                 break;
             case 'arrowdown':
-                newPlayerPosition.y = Math.min(grid.length - 1, playerPosition.y + 1);
-                setHighlightedKey('ArrowDown');
-                moved = true;
-                direction = 'SOUTH';
+                if (clientControl === 'drone') {
+                    newPlayerPosition.y = Math.min(grid.length - 1, playerPosition.y + 1);
+                    setHighlightedKey('ArrowDown');
+                    moved = true;
+                    direction = 'SOUTH';
+                } else {
+                    setConsoleLog(prevLog => [`SYSTEM: No control active. Movement blocked.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
+                }
                 break;
             case 'arrowleft':
-                newPlayerPosition.x = Math.max(0, playerPosition.x - 1);
-                setHighlightedKey('ArrowLeft');
-                moved = true;
-                direction = 'WEST';
+                if (clientControl === 'drone') {
+                    newPlayerPosition.x = Math.max(0, playerPosition.x - 1);
+                    setHighlightedKey('ArrowLeft');
+                    moved = true;
+                    direction = 'WEST';
+                } else {
+                    setConsoleLog(prevLog => [`SYSTEM: No control active. Movement blocked.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
+                }
                 break;
             case 'arrowright':
-                newPlayerPosition.x = Math.min(grid[0].length - 1, playerPosition.x + 1);
-                setHighlightedKey('ArrowRight');
-                moved = true;
-                direction = 'EAST';
+                if (clientControl === 'drone') {
+                    newPlayerPosition.x = Math.min(grid[0].length - 1, playerPosition.x + 1);
+                    setHighlightedKey('ArrowRight');
+                    moved = true;
+                    direction = 'EAST';
+                } else {
+                    setConsoleLog(prevLog => [`SYSTEM: No control active. Movement blocked.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
+                }
                 break;
             case ' ':
                 event.preventDefault();
-                // Space bar functionality moved to VentMap - no longer handled here
+                if (!isSpacePressed) {
+                    setIsSpacePressed(true);
+                    setHighlightedKey('Space');
+                    websocketService.sendMessage({
+                        type: 'spacebar_down',
+                        client: 'drone'
+                    });
+                }
                 break;
             default:
                 break;
@@ -231,28 +285,16 @@ const DroneMap = () => {
                 if (effectiveTargetCellType === WALL) {
                     canMove = false;
                     moveMessage = `DRONE: Movement to [${newPlayerPosition.x}, ${newPlayerPosition.y}] blocked by WALL.`;
-                } else if (effectiveTargetCellType === DOOR) {
-                    if (verticalMode === 'down') {
-                        canMove = true;
-                        moveMessage = `DRONE: Passed through DOOR at [${newPlayerPosition.x}, ${newPlayerPosition.y}] (Mode: DOWN).`;
-                    } else {
-                        canMove = false;
-                        moveMessage = `DRONE: Cannot pass DOOR at [${newPlayerPosition.x}, ${newPlayerPosition.y}]. Mode: ${verticalMode.toUpperCase()}. Requires DOWN.`;
-                    }
-                } else if (effectiveTargetCellType === VENT) {
-                    if (verticalMode === 'up') {
-                        canMove = true;
-                        moveMessage = `DRONE: Passed through VENT at [${newPlayerPosition.x}, ${newPlayerPosition.y}] (Mode: UP).`;
-                    } else {
-                        canMove = false;
-                        moveMessage = `DRONE: Cannot pass VENT at [${newPlayerPosition.x}, ${newPlayerPosition.y}]. Mode: ${verticalMode.toUpperCase()}. Requires UP.`;
-                    }
-                } else if ([EMPTY, START, GOAL].includes(effectiveTargetCellType)) { // GOAL here means SHOW_GOAL is true
+                } else if ([EMPTY, START, GOAL, DOOR, VENT].includes(effectiveTargetCellType)) {
                     canMove = true;
                     if (effectiveTargetCellType === GOAL) {
                         moveMessage = `DRONE: Reached GOAL at [${newPlayerPosition.x}, ${newPlayerPosition.y}].`;
+                    } else if (effectiveTargetCellType === DOOR) {
+                        moveMessage = `DRONE: Passed through DOOR at [${newPlayerPosition.x}, ${newPlayerPosition.y}].`;
+                    } else if (effectiveTargetCellType === VENT) {
+                        moveMessage = `DRONE: Passed through VENT at [${newPlayerPosition.x}, ${newPlayerPosition.y}].`;
                     }
-                } else { // Should not happen if logic is correct
+                } else {
                     canMove = false;
                     moveMessage = `DRONE: Movement to [${newPlayerPosition.x}, ${newPlayerPosition.y}] blocked by unhandled cell type '${effectiveTargetCellType}'.`;
                 }
@@ -260,7 +302,7 @@ const DroneMap = () => {
                 if (canMove) {
                     setPlayerPosition(newPlayerPosition);
                     setConsoleLog(prevLog => [moveMessage, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
-                    websocketService.sendMessage({ type: 'move', payload: { x: newPlayerPosition.x, y: newPlayerPosition.y, direction, verticalMode } });
+                    websocketService.sendMessage({ type: 'move', payload: { x: newPlayerPosition.x, y: newPlayerPosition.y, direction } });
 
                     if (effectiveTargetCellType === GOAL) { // This check ensures SHOW_GOAL was true
                         setGameWon(true);
@@ -275,11 +317,18 @@ const DroneMap = () => {
                 setConsoleLog(prevLog => [`DRONE: Movement to [${newPlayerPosition.x}, ${newPlayerPosition.y}] blocked by boundary.`, ...prevLog.slice(0, MAX_LOG_ENTRIES - 1)]);
             }
         }
-    }, [playerPosition, verticalMode, MAX_LOG_ENTRIES, grid, gameWon]);
+    }, [playerPosition, clientControl, MAX_LOG_ENTRIES, grid, gameWon, isSpacePressed]);
 
     const handleKeyUp = useCallback((event) => {
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
             setHighlightedKey(null);
+        } else if (event.key === ' ') {
+            setIsSpacePressed(false);
+            setHighlightedKey(null);
+            websocketService.sendMessage({
+                type: 'spacebar_up',
+                client: 'drone'
+            });
         }
     }, []);
 
@@ -292,14 +341,20 @@ const DroneMap = () => {
         };
     }, [handleKeyDown, handleKeyUp]);
 
-    // Get drone indicator color based on vertical mode
+    // Get drone indicator color based on who's controlling
     const getDroneColor = () => {
-        return verticalMode === 'up' ? '#4CAF50' : '#f44336'; // Green for up, red for down
+        if (clientControl === 'vents') {
+            return '#4CAF50'; // Green when VentMap is controlling
+        } else if (clientControl === 'drone') {
+            return '#f44336'; // Red when DroneMap is controlling
+        } else {
+            return '#888888'; // Gray when no control
+        }
     };
 
     const currentDroneAscii = propellerFrames[droneFrame % propellerFrames.length];
     const currentHoverOffset = hoverOffsets[hoverFrame % hoverOffsets.length];
-    const droneYPosition = (verticalMode === 'up' ? baseUpPosition : baseDownPosition) + currentHoverOffset;
+    const droneYPosition = baseDownPosition + currentHoverOffset;
 
     return (
         <div className="App" tabIndex={0}>
@@ -376,7 +431,7 @@ const DroneMap = () => {
                             </div>
                             <div className="footer-info">
                                 <span>POS: X={playerPosition?.x} Y={playerPosition?.y} {gameWon ? "[TARGET LOCKED]" : ""}</span>
-                                <span>LEGEND: <span style={{ backgroundColor: '#f44336', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> DRONE 🎯 INFILTRATOR</span>
+                                <span>LEGEND: DRONE: <span style={{ backgroundColor: '#4CAF50', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> VENT CONTROL <span style={{ backgroundColor: '#f44336', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> DRONE CONTROL <span style={{ backgroundColor: '#888888', color: 'white', padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold' }}>X</span> NO CONTROL 🎯 INFILTRATOR</span>
                             </div>
                         </div>
                         <div className="aesthetic-info-area">
@@ -417,15 +472,35 @@ const DroneMap = () => {
 
                     <div className="right-column">
                         <div className="info-pane drone-pane">
-                            <h3>DRONE VERTICAL STATUS</h3>
+                            <h3>DRONE STATUS</h3>
                             <pre
                                 className="drone-ascii"
                                 style={{ position: 'relative', transform: `translateY(${droneYPosition}px)` }}
                             >
                                 {currentDroneAscii}
                             </pre>
-                            <p>MODE: <span className={`mode-indicator ${verticalMode}`}>{verticalMode.toUpperCase()}</span></p>
-                            <p className="control-note">Control via Ventilation Monitor</p>
+                            <p>CONTROL: <span className={`mode-indicator ${clientControl === 'drone' ? 'active' : ''}`}>{controlStatus}</span></p>
+                            <p className="control-note">Hold SPACE to enable VentMap control</p>
+                        </div>
+                        <div className="info-pane drone-vertical-control">
+                            <h3>CONTROL STATUS</h3>
+                            <div className="vertical-mode-display">
+                                <p>STATUS: <span className={`mode-indicator ${clientControl === 'drone' ? 'active' : ''}`}>{controlStatus}</span></p>
+                                <div className="mode-visualization">
+                                    <div className={`altitude-indicator ${clientControl === 'vents' ? 'active' : ''}`}>
+                                        Console 1 (VentMap) Control
+                                    </div>
+                                    <div className={`altitude-indicator ${clientControl === 'drone' ? 'active' : ''}`}>
+                                        Console 2 (DroneMap) Control
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`vertical-toggle-button ${highlightedKey === 'Space' ? 'active' : ''}`}>
+                                HOLD SPACE TO ENABLE VENT CONTROL
+                            </div>
+                            <div className="control-instructions">
+                                <p>Hold SPACE to allow drone movement from VentMap</p>
+                            </div>
                         </div>
                         <div className="console-log-area">
                             <h3>SYSTEM LOG</h3>
@@ -439,12 +514,12 @@ const DroneMap = () => {
                         </div>
                         <div className="controls-area">
                             <div className="control-pad">
-                                <button onClick={() => move('up')} className={`control-button up ${highlightedKey === 'ArrowUp' ? 'active' : ''}`} disabled={gameWon}>↑</button>
+                                <button onClick={() => move('up')} className={`control-button up ${highlightedKey === 'ArrowUp' ? 'active' : ''}`} disabled={gameWon || clientControl !== 'drone'}>↑</button>
                                 <div className="middle-controls">
-                                    <button onClick={() => move('left')} className={`control-button left ${highlightedKey === 'ArrowLeft' ? 'active' : ''}`} disabled={gameWon}>←</button>
-                                    <button onClick={() => move('right')} className={`control-button right ${highlightedKey === 'ArrowRight' ? 'active' : ''}`} disabled={gameWon}>→</button>
+                                    <button onClick={() => move('left')} className={`control-button left ${highlightedKey === 'ArrowLeft' ? 'active' : ''}`} disabled={gameWon || clientControl !== 'drone'}>←</button>
+                                    <button onClick={() => move('right')} className={`control-button right ${highlightedKey === 'ArrowRight' ? 'active' : ''}`} disabled={gameWon || clientControl !== 'drone'}>→</button>
                                 </div>
-                                <button onClick={() => move('down')} className={`control-button down ${highlightedKey === 'ArrowDown' ? 'active' : ''}`} disabled={gameWon}>↓</button>
+                                <button onClick={() => move('down')} className={`control-button down ${highlightedKey === 'ArrowDown' ? 'active' : ''}`} disabled={gameWon || clientControl !== 'drone'}>↓</button>
                             </div>
                         </div>
                     </div>
