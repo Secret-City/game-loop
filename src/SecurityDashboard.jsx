@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const BACKUP_TIME = 2 * 60 * 1000; // 10 minutes in milliseconds
+const BACKUP_TIME = 7 * 60 * 1000; // 7 minutes in milliseconds
 
 const isProduction = process.env.NODE_ENV === 'production';
 const basePath = isProduction ? '/game-loop/dist/' : '/';
@@ -257,9 +257,9 @@ Special attributes:
         if (dashboardData?.last_backup !== undefined) {
             const last_backup = dashboardData.last_backup;
             if (last_backup && last_backup !== -1) {
-                // last_backup is Date.now() from server, start 2-minute countdown from that time
+                // last_backup is Date.now() from server, start 7-minute countdown from that time
                 const endTime = last_backup + BACKUP_TIME;
-                console.log('Starting 2-minute countdown from server time:', last_backup, 'Date:', new Date(last_backup));
+                console.log('Starting 7-minute countdown from server time:', last_backup, 'Date:', new Date(last_backup));
                 console.log('Countdown will end at:', endTime, 'Date:', new Date(endTime));
                 console.log('Current time:', Date.now(), 'Date:', new Date(Date.now()));
                 setBackupEndTime(endTime);
@@ -282,7 +282,7 @@ Special attributes:
 
     // Format timestamp to countdown timer (for backup)
     const formatCountdown = () => {
-        if (!backupEndTime) return "10:00";
+        if (!backupEndTime) return "Good";
 
         const diff = backupEndTime - currentTime;
 
@@ -700,7 +700,7 @@ Special attributes:
                 <div style={{ ...styles.corner, ...styles.bottomRight }}>
                     <div style={styles.statusItem}>
                         <div style={styles.statusLabel}>
-                            {isBackupNeeded() ? "Timeline Collapsing" : "Timeline Collapse In"}
+                            {!backupEndTime ? "System Integrity" : isBackupNeeded() ? "Timeline Collapsing" : "System Compromised In"}
                         </div>
                         <div style={{
                             ...styles.countdown
@@ -828,7 +828,7 @@ Special attributes:
             {currentPhase === "RCB008" && (
                 <div style={styles.rcb008Overlay}>
                     <div style={styles.rcb008Title}>
-                        Contact me, recalibrate with this code
+                        recalibrate the harmonics core with this code
                     </div>
                     <div style={styles.rcb008CodeContainer}>
                         {['x', 'h', 'j', 'y', 'm'].map((letter, index) => (

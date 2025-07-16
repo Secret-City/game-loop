@@ -116,6 +116,31 @@ const styles = {
         background: '#4caf50',
         transition: 'width 0.4s ease',
     },
+    anomalyBar: {
+        position: 'absolute',
+        bottom: '0',
+        left: '0',
+        right: '0',
+        backgroundColor: 'rgb(255, 0, 0)',
+        color: '#fff',
+        fontFamily: 'monospace',
+        fontSize: '1.5vw',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        padding: '1vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.8vw',
+        zIndex: 20,
+        borderTop: '0.3vw solid #ff0000',
+        height: '15%',
+    },
+    anomalyIcon: {
+        width: '2vw',
+        height: '2vw',
+        filter: 'brightness(0) invert(1)',
+    },
 };
 
 // List of all video files to be preloaded.
@@ -542,6 +567,17 @@ function VideoScreen() {
                                  */}
                                 <div style={{ ...styles.overlayCorner, ...styles.bottomRight }}><p style={styles.bottomRightCode}>{screenCodes[screenNum] || ""}</p></div>
                             </div>
+                            {/* Anomaly Detection Bar */}
+                            {highlightedScreens[screenNum] && (
+                                <div style={styles.anomalyBar}>
+                                    <img 
+                                        src={`${basePath}images/icon_anomalydetected.png`}
+                                        alt="Anomaly Icon"
+                                        style={styles.anomalyIcon}
+                                    />
+                                    <span>Warning: Anomaly Detected</span>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
