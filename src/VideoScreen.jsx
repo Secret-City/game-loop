@@ -134,7 +134,7 @@ const styles = {
         gap: '0.8vw',
         zIndex: 20,
         borderTop: '0.3vw solid #ff0000',
-        height: '15%',
+        height: '8%',
     },
     anomalyIcon: {
         width: '2vw',
@@ -570,7 +570,7 @@ function VideoScreen() {
                             {/* Anomaly Detection Bar */}
                             {highlightedScreens[screenNum] && (
                                 <div style={styles.anomalyBar}>
-                                    <img 
+                                    <img
                                         src={`${basePath}images/icon_anomalydetected.png`}
                                         alt="Anomaly Icon"
                                         style={styles.anomalyIcon}
