@@ -831,7 +831,7 @@ Special attributes:
                         recalibrate the harmonics core with this code
                     </div>
                     <div style={styles.rcb008CodeContainer}>
-                        {['x', 'h', 'j', 'y', 'm'].map((letter, index) => (
+                        {['i', 'u', 'k', 'a', 'c'].map((letter, index) => (
                             <img
                                 key={index}
                                 src={`${basePath}keys/key_${letter}.png`}
