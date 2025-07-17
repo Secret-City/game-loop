@@ -8,7 +8,6 @@ const basePath = isProduction ? '/game-loop/dist/' : '/';
 const SecurityDashboard = ({ dashboardData }) => {
     const [currentTime, setCurrentTime] = useState(Date.now());
     const [backupEndTime, setBackupEndTime] = useState(null);
-    const [gameStartTime, setGameStartTime] = useState(null);
     const [collapseCountdown, setCollapseCountdown] = useState(null);
     const [timelineCollapsed, setTimelineCollapsed] = useState(false);
     const [currentPhase, setCurrentPhase] = useState("Unknown");
@@ -28,6 +27,7 @@ const SecurityDashboard = ({ dashboardData }) => {
     const [crystalIntegrity, setCrystalIntegrity] = useState("Calibrated");
     const [crystalPower, setCrystalPower] = useState("Stable");
     const [collapseSeconds, setCollapseSeconds] = useState(10);
+    const [gameLoops, setGameLoops] = useState(0);
 
     // Console command function - expose to window for debugging
     useEffect(() => {
@@ -205,6 +205,7 @@ Special attributes:
             if (dashboardData.crystal_power !== undefined) setCrystalPower(dashboardData.crystal_power);
             if (dashboardData.collapse_seconds !== undefined) setCollapseSeconds(dashboardData.collapse_seconds);
             if (dashboardData.phase !== undefined) setCurrentPhase(dashboardData.phase);
+            if (dashboardData.game_loops !== undefined) setGameLoops(dashboardData.game_loops);
 
             // Handle FNL009 phase
             if (dashboardData.phase === "FNL009" && dashboardData.sequence) {
@@ -244,13 +245,6 @@ Special attributes:
         }
     }, [crystalIntegrity, collapseSeconds]);
 
-    // Set game start time when component mounts or game_start changes
-    useEffect(() => {
-        if (dashboardData?.game_start) {
-            setGameStartTime(dashboardData.game_start);
-        }
-        // Don't set default if game_start is not present
-    }, [dashboardData?.game_start]);
 
     // Set backup end time when component mounts or last_backup changes
     useEffect(() => {
@@ -321,14 +315,6 @@ Special attributes:
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    // Format elapsed time since game start (counting up)
-    const formatElapsed = () => {
-        if (!gameStartTime) return "00:00";
-        const diff = Math.max(0, currentTime - gameStartTime);
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
 
     // Check if we're in collapsing or collapsed state
     const isCollapsing = crystalIntegrity?.toLowerCase() === 'collapsing' || crystalIntegrity?.toLowerCase() === 'collapsed';
@@ -787,7 +773,8 @@ Special attributes:
                         </svg>
                     </div>
                     <div style={styles.gameTimer}>
-                        GAME TIME: {formatElapsed()}
+                        <div style={{ fontSize: '8px', opacity: 0.7, marginBottom: '2px' }}>LOOPS</div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#00ffaa' }}>{gameLoops}</div>
                     </div>
                 </div>
             </div>
