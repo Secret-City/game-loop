@@ -28,6 +28,19 @@ const SecurityDashboard = ({ dashboardData }) => {
     const [crystalPower, setCrystalPower] = useState("Stable");
     const [collapseSeconds, setCollapseSeconds] = useState(10);
     const [gameLoops, setGameLoops] = useState(0);
+    const [currentStage, setCurrentStage] = useState(0); // Track current game stage
+    const [countdownEndTime, setCountdownEndTime] = useState(null); // Server timestamp for countdown
+
+    // Game stages configuration
+    const gameStages = [
+        { name: 'firewall', icon: '┌─────┐\n│▒▒▒▒▒│\n│▒▒▒▒▒│\n│▒▒▒▒▒│\n└─────┘', iconFilled: '┌─────┐\n│█████│\n│█████│\n│█████│\n└─────┘' },
+        { name: 'vents', icon: '┌─────┐\n│ ◇ ∩ │\n│∪   ∪│\n│  ∪  │\n└─────┘', iconFilled: '┌─────┐\n│ ◆ █ │\n│███ █│\n│ ███ │\n└─────┘' },
+        { name: 'plant', icon: '┌─────┐\n│ ╱│╲ │\n│╱ │ ╲│\n│  │  │\n└─────┘', iconFilled: '┌─────┐\n│ ▲│▲ │\n│▲ █ ▲│\n│  █  │\n└─────┘' },
+        { name: 'rhythm', icon: '┌─────┐\n│ │ │ │\n│ ┤ ┤ │\n│ │ │ │\n└─────┘', iconFilled: '┌─────┐\n│ █ █ │\n│ █ █ │\n│ █ █ │\n└─────┘' },
+        { name: 'maze', icon: '┌─────┐\n│┌─┬─┐│\n│├ │ ┤│\n│└─┴─┘│\n└─────┘', iconFilled: '┌─────┐\n│█████│\n│██ ██│\n│█████│\n└─────┘' },
+        { name: 'power', icon: '┌─────┐\n│ ╱▲╲ │\n│◄███►│\n│ ╲▼╱ │\n└─────┘', iconFilled: '┌─────┐\n│ ▲▲▲ │\n│◄███►│\n│ ▼▼▼ │\n└─────┘' },
+        { name: 'timecore', icon: '┌─────┐\n│ ╭─╮ │\n│ │○│ │\n│ ╰─╯ │\n└─────┘', iconFilled: '┌─────┐\n│ ╭─╮ │\n│ │●│ │\n│ ╰─╯ │\n└─────┘' }
+    ];
 
     // Console command function - expose to window for debugging
     useEffect(() => {
@@ -159,17 +172,45 @@ Special attributes:
                 100% { opacity: 1; }
             }
             @keyframes rcbPulse {
-                0% { 
+                0% {
                     background-color: rgba(255, 0, 0, 0.95);
                     border-color: rgba(255, 0, 0, 1);
                 }
-                50% { 
+                50% {
                     background-color: rgba(255, 0, 0, 0.8);
                     border-color: rgba(255, 0, 0, 0.7);
                 }
-                100% { 
+                100% {
                     background-color: rgba(255, 0, 0, 0.95);
                     border-color: rgba(255, 0, 0, 1);
+                }
+            }
+            @keyframes dashboardGlow {
+                0% {
+                    box-shadow: inset 0 0 20px rgba(0, 255, 170, 0.2),
+                                0 0 20px rgba(0, 255, 170, 0.3);
+                }
+                50% {
+                    box-shadow: inset 0 0 30px rgba(0, 255, 170, 0.4),
+                                0 0 40px rgba(0, 255, 170, 0.6);
+                }
+                100% {
+                    box-shadow: inset 0 0 20px rgba(0, 255, 170, 0.2),
+                                0 0 20px rgba(0, 255, 170, 0.3);
+                }
+            }
+            @keyframes dashboardGlowRed {
+                0% {
+                    box-shadow: inset 0 0 20px rgba(255, 102, 102, 0.2),
+                                0 0 20px rgba(255, 102, 102, 0.3);
+                }
+                50% {
+                    box-shadow: inset 0 0 30px rgba(255, 102, 102, 0.4),
+                                0 0 40px rgba(255, 102, 102, 0.6);
+                }
+                100% {
+                    box-shadow: inset 0 0 20px rgba(255, 102, 102, 0.2),
+                                0 0 20px rgba(255, 102, 102, 0.3);
                 }
             }
             .scanline-effect {
@@ -206,6 +247,8 @@ Special attributes:
             if (dashboardData.collapse_seconds !== undefined) setCollapseSeconds(dashboardData.collapse_seconds);
             if (dashboardData.phase !== undefined) setCurrentPhase(dashboardData.phase);
             if (dashboardData.game_loops !== undefined) setGameLoops(dashboardData.game_loops);
+            if (dashboardData.current_stage !== undefined) setCurrentStage(dashboardData.current_stage);
+            if (dashboardData.countdown_end_time !== undefined) setCountdownEndTime(dashboardData.countdown_end_time);
 
             // Handle FNL009 phase
             if (dashboardData.phase === "FNL009" && dashboardData.sequence) {
@@ -298,6 +341,18 @@ Special attributes:
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
 
+    // Format giant countdown timer (HH:MM:SS)
+    const formatMainCountdown = () => {
+        if (!countdownEndTime) return "00:00:00";
+
+        const diff = Math.max(0, countdownEndTime - currentTime);
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
     // Check if backup is needed (time exceeded)
     const isBackupNeeded = () => {
         if (!backupEndTime) return false;
@@ -332,23 +387,23 @@ Special attributes:
             backgroundColor: useRedTheme ? '#400000' : '#000810',
             color: useRedTheme ? '#ff6666' : '#00ffaa',
             fontFamily: 'monospace',
-            fontSize: '10px',
+            fontSize: '1.8vh',
             display: 'flex',
             flexDirection: 'column',
             border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
             borderRadius: '4px',
             overflow: 'hidden',
             textShadow: '0 0 8px currentColor',
-            boxShadow: `inset 0 0 20px ${useRedTheme ? 'rgba(255, 102, 102, 0.2)' : 'rgba(0, 255, 170, 0.2)'}`,
+            animation: useRedTheme ? 'dashboardGlowRed 4s ease-in-out infinite' : 'dashboardGlow 4s ease-in-out infinite',
             transition: 'all 0.5s ease',
         },
         header: {
             backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.8)' : 'rgba(0, 20, 40, 0.8)',
-            padding: '4px 8px',
+            padding: '1vh 1.5vw',
             borderBottom: `1px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
             textAlign: 'center',
             fontWeight: 'bold',
-            fontSize: '11px',
+            fontSize: '2.5vh',
             textTransform: 'uppercase',
             letterSpacing: '1px',
             filter: 'brightness(1.2)',
@@ -356,95 +411,141 @@ Special attributes:
         content: {
             flex: 1,
             position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(25vw, 1fr) minmax(35vw, 1.5fr) minmax(25vw, 1fr)',
+            gridTemplateRows: '1fr',
+            gap: '1.5vh',
+            padding: '1.5vh',
+            height: '100%',
+            alignItems: 'stretch',
+            overflow: 'hidden',
+        },
+        leftPanel: {
+            gridColumn: '1',
+            gridRow: '1',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5vh',
+            height: '100%',
+            minWidth: 0,
+        },
+        rightPanel: {
+            gridColumn: '3',
+            gridRow: '1',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5vh',
+            height: '100%',
+            minWidth: 0,
+        },
+        centralArea: {
+            gridColumn: '2',
+            gridRow: '1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            justifyContent: 'space-between',
+            gap: '1.5vh',
+            height: '100%',
+            zIndex: 2,
+            minWidth: 0,
+        },
+        terminalPanel: {
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.9)' : 'rgba(0, 20, 40, 0.9)',
+            border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
+            borderRadius: '4px',
+            padding: '2vh',
+            backdropFilter: 'blur(3px)',
+            fontFamily: 'monospace',
+            textShadow: '0 0 8px currentColor',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+        },
+        centralTimer: {
+            textAlign: 'center',
+            fontSize: '6vh',
+            fontWeight: 'bold',
+            textShadow: '0 0 15px currentColor, 0 0 30px currentColor',
+            color: useRedTheme ? '#ff6666' : '#00ffaa',
+            letterSpacing: '0.4vw',
+            fontFamily: 'monospace',
+            padding: '2vh',
+            border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
+            borderRadius: '8px',
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.3)' : 'rgba(0, 40, 80, 0.3)',
+            flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
         },
-        crystalCenter: {
+        centralProgress: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '1vw',
+            padding: '1.5vh',
+            border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
+            borderRadius: '8px',
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.3)' : 'rgba(0, 40, 80, 0.3)',
+            flex: 1,
+            overflow: 'hidden',
+        },
+        centralLoops: {
+            textAlign: 'center',
+            padding: '2vh',
+            border: `2px solid ${useRedTheme ? '#ff6666' : '#00ffaa'}`,
+            borderRadius: '8px',
+            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.3)' : 'rgba(0, 40, 80, 0.3)',
+            flex: 1,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 2,
         },
-        crystal: {
-            width: '100px',
-            height: '120px',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '8px',
+        loopsLabel: {
+            fontSize: '2vh',
+            color: '#66bbaa',
+            marginBottom: '1vh',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
         },
-        crystalSvg: {
-            width: '100%',
-            height: '100%',
-            filter: (crystalPower === 'stable' && !useRedTheme)
-                ? 'drop-shadow(0 0 15px #00ffaa) drop-shadow(0 0 30px #00ffaa)'
-                : 'drop-shadow(0 0 8px #ff4444)',
-        },
-        '@keyframes crystalPulse': {
-            '0%, 100%': { filter: 'drop-shadow(0 0 15px #00ffaa) drop-shadow(0 0 30px #00ffaa)' },
-            '50%': { filter: 'drop-shadow(0 0 25px #00ffaa) drop-shadow(0 0 50px #00ffaa)' }
+        loopsValue: {
+            fontSize: '6vh',
+            fontWeight: 'bold',
+            color: useRedTheme ? '#ff6666' : '#00ffaa',
+            textShadow: '0 0 15px currentColor',
+            fontFamily: 'monospace',
         },
         countdown: {
             textAlign: 'center',
-            fontSize: '18px',
+            fontSize: '3vh',
             fontWeight: 'bold',
-            marginBottom: '4px',
-            textShadow: '0 0 10px currentColor',
+            marginBottom: '1vh',
+            textShadow: '0 0 12px currentColor',
             color: '#00ffaa',
         },
         gameTimer: {
             textAlign: 'center',
-            fontSize: '10px',
-            opacity: 0.7,
+            fontSize: '2vh',
+            opacity: 0.8,
             color: '#88ffcc',
         },
-        corner: {
-            position: 'absolute',
-            padding: '8px',
-            fontSize: '9px',
-            lineHeight: '1.2',
-            backgroundColor: useRedTheme ? 'rgba(80, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-            border: `1px solid ${useRedTheme ? 'rgba(255, 102, 102, 0.3)' : 'rgba(0, 255, 170, 0.3)'}`,
-            borderRadius: '3px',
-            backdropFilter: 'blur(2px)',
-        },
-        topLeft: {
-            top: '8px',
-            left: '8px',
-            maxWidth: '120px',
-        },
-        topRight: {
-            top: '8px',
-            right: '8px',
-            maxWidth: '120px',
-        },
-        bottomLeft: {
-            bottom: '8px',
-            left: '8px',
-            maxWidth: '120px',
-        },
-        bottomRight: {
-            bottom: '8px',
-            right: '8px',
-            maxWidth: '120px',
-        },
         statusItem: {
-            marginBottom: '6px',
+            marginBottom: '1.5vh',
         },
         statusLabel: {
             color: '#66bbaa',
-            fontSize: '8px',
-            marginBottom: '2px',
+            fontSize: '1.4vh',
+            marginBottom: '0.5vh',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            letterSpacing: '0.8px',
         },
         statusValue: {
             fontWeight: 'bold',
-            fontSize: '9px',
-            textShadow: '0 0 6px currentColor',
+            fontSize: '1.8vh',
+            textShadow: '0 0 8px currentColor',
         },
         collapseOverlay: {
             position: 'absolute',
@@ -572,6 +673,28 @@ Special attributes:
             animation: 'rcbPulse 2s ease-in-out infinite',
             textAlign: 'center',
         },
+        progressStage: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        progressIcon: {
+            fontFamily: 'monospace',
+            fontSize: '1.2vh',
+            lineHeight: '1.1',
+            whiteSpace: 'pre',
+            textAlign: 'center',
+            textShadow: '0 0 8px currentColor',
+        },
+    };
+
+    // Get stage color based on completion status
+    const getStageColor = (stageIndex) => {
+        if (useRedTheme) return '#ff6666';
+
+        if (stageIndex < currentStage) return '#00ff88'; // Completed - green
+        if (stageIndex === currentStage) return '#ffff44'; // Current - yellow
+        return '#666666'; // Locked - gray
     };
 
     // Get status color based on value
@@ -622,159 +745,109 @@ Special attributes:
             </div>
 
             <div style={styles.content}>
-                {/* Top Left Corner - Security Status */}
-                <div style={{ ...styles.corner, ...styles.topLeft }}>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Current Phase</div>
-                        <div style={{ ...styles.statusValue, color: '#ffaa66' }}>
-                            {currentPhase.toUpperCase()}
+                {/* Left Panel */}
+                <div style={styles.leftPanel}>
+                    <div style={styles.terminalPanel}>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Current Phase</div>
+                            <div style={{ ...styles.statusValue, color: '#ffaa66' }}>
+                                {currentPhase.toUpperCase()}
+                            </div>
+                        </div>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Security Status</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(securityDoors) }}>
+                                DOORS {securityDoors.toUpperCase()}
+                            </div>
+                        </div>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Firewall</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(securityFirewall) }}>
+                                {securityFirewall.toUpperCase()}
+                            </div>
                         </div>
                     </div>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Security Status</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(securityDoors) }}>
-                            DOORS {securityDoors.toUpperCase()}
+
+                    <div style={styles.terminalPanel}>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Crystal Integrity</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(crystalIntegrity) }}>
+                                {crystalIntegrity.toUpperCase()}
+                            </div>
                         </div>
-                    </div>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Firewall</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(securityFirewall) }}>
-                            {securityFirewall.toUpperCase()}
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Crystal Power</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(crystalPower) }}>
+                                {crystalPower.toUpperCase()}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Top Right Corner - Vent Status */}
-                <div style={{ ...styles.corner, ...styles.topRight }}>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Internal Vents</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsInternal) }}>
-                            {ventsInternal.toUpperCase()}
-                        </div>
+                {/* Central Area */}
+                <div style={styles.centralArea}>
+                    {/* Main Timer */}
+                    <div style={styles.centralTimer}>
+                        {formatMainCountdown()}
                     </div>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>External Vents</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsExternal) }}>
-                            {ventsExternal.toUpperCase()}
-                        </div>
+
+                    {/* Progress Icons */}
+                    <div style={styles.centralProgress}>
+                        {gameStages.map((stage, index) => (
+                            <div key={stage.name} style={styles.progressStage}>
+                                <div
+                                    style={{
+                                        ...styles.progressIcon,
+                                        color: getStageColor(index)
+                                    }}
+                                >
+                                    {index < currentStage ? stage.iconFilled : stage.icon}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Airflow</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(ventsFlow) }}>
-                            {ventsFlow.toUpperCase()}
-                        </div>
+
+                    {/* Loops Counter */}
+                    <div style={styles.centralLoops}>
+                        <div style={styles.loopsLabel}>Game Loops</div>
+                        <div style={styles.loopsValue}>{gameLoops}</div>
                     </div>
                 </div>
 
-                {/* Bottom Left Corner - Crystal Status */}
-                <div style={{ ...styles.corner, ...styles.bottomLeft }}>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Crystal Integrity</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(crystalIntegrity) }}>
-                            {crystalIntegrity.toUpperCase()}
+                {/* Right Panel */}
+                <div style={styles.rightPanel}>
+                    <div style={styles.terminalPanel}>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Internal Vents</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(ventsInternal) }}>
+                                {ventsInternal.toUpperCase()}
+                            </div>
+                        </div>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>External Vents</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(ventsExternal) }}>
+                                {ventsExternal.toUpperCase()}
+                            </div>
+                        </div>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>Airflow</div>
+                            <div style={{ ...styles.statusValue, color: getStatusColor(ventsFlow) }}>
+                                {ventsFlow.toUpperCase()}
+                            </div>
                         </div>
                     </div>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>Crystal Power</div>
-                        <div style={{ ...styles.statusValue, color: getStatusColor(crystalPower) }}>
-                            {crystalPower.toUpperCase()}
-                        </div>
-                    </div>
-                </div>
 
-                {/* Bottom Right Corner - Backup Status */}
-                <div style={{ ...styles.corner, ...styles.bottomRight }}>
-                    <div style={styles.statusItem}>
-                        <div style={styles.statusLabel}>
-                            {!backupEndTime ? "System Integrity" : isBackupNeeded() ? "Timeline Collapsing" : "System Compromised In"}
+                    <div style={styles.terminalPanel}>
+                        <div style={styles.statusItem}>
+                            <div style={styles.statusLabel}>
+                                {!backupEndTime ? "System Integrity" : isBackupNeeded() ? "Timeline Collapsing" : "System Compromised In"}
+                            </div>
+                            <div style={{
+                                ...styles.countdown
+                            }} className={isBackupNeeded() ? "blink-red" : ""}>
+                                {formatCountdown()}
+                            </div>
                         </div>
-                        <div style={{
-                            ...styles.countdown
-                        }} className={isBackupNeeded() ? "blink-red" : ""}>
-                            {formatCountdown()}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Central Crystal */}
-                <div style={styles.crystalCenter}>
-                    <div style={styles.crystal}>
-                        <svg
-                            style={styles.crystalSvg}
-                            className={crystalPower === 'stable' && !useRedTheme ? 'crystal-pulse' : ''}
-                            viewBox="0 0 100 120"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            {/* Outer crystal structure */}
-                            <path
-                                d="M50 5 L75 25 L75 85 L50 115 L25 85 L25 25 Z"
-                                fill="none"
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="2"
-                                opacity="0.9"
-                            />
-                            {/* Inner crystal facets */}
-                            <path
-                                d="M50 5 L65 20 L50 60 L35 20 Z"
-                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="1"
-                                opacity="0.8"
-                            />
-                            <path
-                                d="M25 25 L50 60 L25 85 Z"
-                                fill={useRedTheme ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="1"
-                                opacity="0.6"
-                            />
-                            <path
-                                d="M75 25 L50 60 L75 85 Z"
-                                fill={useRedTheme ? "rgba(255, 102, 102, 0.05)" : "rgba(0, 255, 170, 0.05)"}
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="1"
-                                opacity="0.6"
-                            />
-                            <path
-                                d="M25 85 L50 60 L50 115 L25 85 Z"
-                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="1"
-                                opacity="0.8"
-                            />
-                            <path
-                                d="M75 85 L50 60 L50 115 L75 85 Z"
-                                fill={useRedTheme ? "rgba(255, 102, 102, 0.1)" : "rgba(0, 255, 170, 0.1)"}
-                                stroke={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                strokeWidth="1"
-                                opacity="0.8"
-                            />
-                            {/* Inner energy lines */}
-                            <line x1="35" y1="20" x2="65" y2="20" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
-                            <line x1="25" y1="40" x2="75" y2="40" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
-                            <line x1="25" y1="60" x2="75" y2="60" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
-                            <line x1="25" y1="80" x2="75" y2="80" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.5" />
-                            <line x1="35" y1="100" x2="65" y2="100" stroke={useRedTheme ? "#ff6666" : "#00ffaa"} strokeWidth="0.5" opacity="0.7" />
-                            {/* Center core */}
-                            <circle
-                                cx="50"
-                                cy="60"
-                                r="4"
-                                fill={useRedTheme ? "#ff6666" : "#00ffaa"}
-                                opacity="0.9"
-                            />
-                            <circle
-                                cx="50"
-                                cy="60"
-                                r="2"
-                                fill="#ffffff"
-                                opacity="0.8"
-                            />
-                        </svg>
-                    </div>
-                    <div style={styles.gameTimer}>
-                        <div style={{ fontSize: '8px', opacity: 0.7, marginBottom: '2px' }}>LOOPS</div>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#00ffaa' }}>{gameLoops}</div>
                     </div>
                 </div>
             </div>
@@ -836,6 +909,7 @@ Special attributes:
                     Transmission Complete
                 </div>
             )}
+
         </div>
     );
 };

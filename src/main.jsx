@@ -6,6 +6,7 @@ import VentMap from './VentMap';
 import DroneMap from './DroneMap';
 import VideoScreen from './VideoScreen.jsx'; // Import VideoScreen
 import Microfilm from './Microfilm'; // Import Microfilm
+import SecurityDashboard from './SecurityDashboard.jsx'; // Import SecurityDashboard
 import './index.css';
 
 console.log('Starting main.jsx...'); // Debugging log
@@ -14,8 +15,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
         <Router> {/* Wrap App with Router */}
             <Routes>
+                <Route path="/" element={<VideoScreen />} />
                 <Route path="/dronemap" element={<DroneMap />} /> {/* Home page */}
                 <Route path="/ventmap" element={<VentMap />} /> {/* Vent map page */}
+
+                <Route path="/progress" element={<SecurityDashboard dashboardData={{}} />} />
                 <Route path="/security" element={<VideoScreen />} />
                 <Route path="/microfilm" element={<Microfilm />} />
             </Routes>
